@@ -4,18 +4,13 @@ import Data.Maybe (fromMaybe, fromJust)
 import Data.List (find, findIndex)
 import System.Environment (getArgs)
 
+-- TODO: make these data types parametric on Token
+
 type Multiset = [(Token, Int)]
 data Rxn = Rxn { lhs :: Multiset,
                  rhs :: Multiset,
                  rate :: Double }
   deriving (Eq, Show)
-
--- data Rxn' = Rxn' { lhs :: Multiset,
---                    update :: Multiset -> Multiset,
---                    rate :: Double }
---   deriving Show
-
--- type Rule params = (State -> params, params -> Rxn)
 type Rule = Multiset -> [Rxn]
 type State = (Multiset, Double, Int) -- (mixture, time, num of steps)
 
@@ -25,12 +20,6 @@ frequencies xs = foldl (flip $ Map.alter (\v -> Just $ fromMaybe 0 v + 1)) Map.e
 
 ms :: [Token] -> [(Token, Int)]
 ms = Map.toList . frequencies
-
--- match :: Rule -> State -> [(Multiset, Double)]
--- match :: Rule -> State -> ([(Token, Token)], Double)
-
--- apply :: Rxn' -> State -> State
--- apply r s = (update r) s
 
 diff :: Multiset -> Multiset -> Multiset
 diff [] ys = []
@@ -61,7 +50,7 @@ selectRxn acc n (rxn:rxns) | n < acc' = rxn
   where acc' = acc + (rate rxn)
 
 sample :: R.StdGen -> [Rxn] -> (Rxn, Double, R.StdGen)
-sample gen rxns = (selectRxn 0.0 b rxns,  dt, g2) -- (rxns !! fromJust (getIndex (map rate rxns) b), dt, g2)
+sample gen rxns = (selectRxn 0.0 b rxns,  dt, g2)
   where totalProp = sum $ map rate rxns
         (a, g1) = R.randomR (0.0, 1.0) gen
         (b, g2) = R.randomR (0.0, totalProp) g1
@@ -85,11 +74,6 @@ printTrajectory states = mapM_ printMixture states
 
 
 -- Model
-
--- data Token = L { mass :: Float, index :: Int }
---            | B { carbon :: Float }
---            | R { age :: Int }
---   deriving Show, Ord
 
 data Token = L Double Int -- mass and index
            | B Double -- carbon
@@ -115,8 +99,7 @@ d :: Int -> Double
 d 0 = 1
 d 1 = 2
 
--- type Rule = Multiset -> (Multiset, Double)
--- grow (L m i) (B c) = ([L (m+1) i, B (c-1)], gmax * d(i) * c)
+-- TODO: use quasi-quotes to make the definition of rules simpler
 
 -- L m i, B c -> L (m+1) i, B (c-1)
 grow :: Multiset -> [Rxn]
@@ -129,13 +112,7 @@ grow mix = [ rxn m i c k n | (L m i, k) <- mix
               , rate = gmax * d(i) * c *
                        (fromIntegral k) * (fromIntegral n) }
 
--- TODO: add the other rules
-
 -- R age -> R (age+1), L m0 age
--- \a. Rule { lhs = ms [R a],
---            rhs = ms [R (a+1), L m0 a]
---            rate = 1 }
-
 m0 :: Double
 m0 = 0.0
 
@@ -146,8 +123,7 @@ createLeaf mix = [ rxn age n | (R age, n) <- mix ]
                         , rhs = ms [R (age+1), L m0 age]
                         , rate = n }
 
--- getIndex xs n = findIndex (>n) cummulative
---   where cummulative = scanl1 (+) xs
+-- TODO: add the other rules
 
 main :: IO ()
 main = do
