@@ -124,9 +124,9 @@ grow mix = [ rxn m i c k n | (L m i, k) <- mix
                            , (B c, n) <- mix ]
   where rxn :: Double -> Int -> Double -> Int -> Int -> Rxn
         rxn m i c k n =
-          Rxn { lhs = ms [L m i, B c],
-                rhs = ms [L (m+1) i, B (c-1)],
-                rate = gmax * d(i) * c *
+          Rxn { lhs = ms [L m i, B c]
+              , rhs = ms [L (m+1) i, B (c-1)]
+              , rate = gmax * d(i) * c *
                        (fromIntegral k) * (fromIntegral n) }
 
 -- TODO: add the other rules
@@ -135,6 +135,16 @@ grow mix = [ rxn m i c k n | (L m i, k) <- mix
 -- \a. Rule { lhs = ms [R a],
 --            rhs = ms [R (a+1), L m0 a]
 --            rate = 1 }
+
+m0 :: Double
+m0 = 0.0
+
+createLeaf :: Multiset -> [Rxn]
+createLeaf mix = [ rxn age n | (R age, n) <- mix ]
+  where rxn :: Int -> Int -> Rxn
+        rxn age n = Rxn { lhs = ms [R age]
+                        , rhs = ms [R (age+1), L m0 age]
+                        , rate = n }
 
 -- getIndex xs n = findIndex (>n) cummulative
 --   where cummulative = scanl1 (+) xs
