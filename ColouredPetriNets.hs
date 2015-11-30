@@ -14,12 +14,15 @@ data Rxn = Rxn { lhs :: Multiset,
 type Rule = Multiset -> [Rxn]
 type State = (Multiset, Double, Int) -- (mixture, time, num of steps)
 
--- TODO: rewrite this, it's unnecessary to work with Maps
-frequencies :: (Ord a, Num b) => [a] -> Map.Map a b
-frequencies xs = foldl (flip $ Map.alter (\v -> Just $ fromMaybe 0 v + 1)) Map.empty xs
+frequencies :: Eq a => [(a, Int)] -> [a] -> [(a, Int)]
+frequencies acc [] = acc
+frequencies acc (x:xs) = frequencies (update acc) xs
+  where update ((y,n):ys) | x == y = (y,n+1):ys
+                          | otherwise = (y,n):update ys
+        update [] = [(x,1)]
 
 ms :: [Token] -> [(Token, Int)]
-ms = Map.toList . frequencies
+ms = frequencies []
 
 diff :: Multiset -> Multiset -> Multiset
 diff [] ys = []
