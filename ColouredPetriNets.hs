@@ -95,17 +95,20 @@ carbon :: Token -> Double
 carbon (B c) = c
 carbon _ = error "token is not of type B"
 
+-- Constants
 gmax :: Double
 gmax = 1.0
 
 d :: Int -> Double
-d 0 = 1
-d 1 = 2
+d n = fromIntegral (n+1)
+
+m0 :: Double
+m0 = 0.0
 
 -- TODO: use quasi-quotes to make the definition of rules simpler
 
 -- L m i, B c -> L (m+1) i, B (c-1)
-grow :: Multiset -> [Rxn]
+grow :: Rule
 grow mix = [ rxn m i c k n | (L m i, k) <- mix
                            , (B c, n) <- mix ]
   where rxn :: Double -> Int -> Double -> Int -> Int -> Rxn
@@ -113,18 +116,35 @@ grow mix = [ rxn m i c k n | (L m i, k) <- mix
           Rxn { lhs = ms [L m i, B c]
               , rhs = ms [L (m+1) i, B (c-1)]
               , rate = gmax * d(i) * c *
-                       (fromIntegral k) * (fromIntegral n) }
+                       fromIntegral k * fromIntegral n }
 
 -- R age -> R (age+1), L m0 age
-m0 :: Double
-m0 = 0.0
-
-createLeaf :: Multiset -> [Rxn]
+createLeaf :: Rule
 createLeaf mix = [ rxn age n | (R age, n) <- mix ]
   where rxn :: Int -> Int -> Rxn
         rxn age n = Rxn { lhs = ms [R age]
                         , rhs = ms [R (age+1), L m0 age]
-                        , rate = n }
+                        , rate = fromIntegral n }
+
+photosynthesis :: Rule
+photosynthesis mix = [ rxn m i c k n | (L m i, k) <- mix
+                                     , (B c, n) <- mix ]
+  where rxn :: Double -> Int -> Double -> Int -> Int -> Rxn
+        rxn m i c k n =
+          Rxn { lhs = ms [L m i, B c]
+              , rhs = ms [L m i, B (c+dc)]
+              , rate = fromIntegral k * fromIntegral n }
+          where dc = m -- FIXME: add term for the effective area
+
+maintenance :: Rule
+maintenance mix = [ rxn m i c k n | (L m i, k) <- mix
+                                  , (B c, n) <- mix ]
+  where rxn :: Double -> Int -> Double -> Int -> Int -> Rxn
+        rxn m i c k n =
+          Rxn { lhs = ms [L m i, B c]
+              , rhs = ms [L m i, B (c-dc)]
+              , rate = fromIntegral k * fromIntegral n }
+          where dc = 1.0 -- should this be a function of m?
 
 -- TODO: add the other rules
 
@@ -133,8 +153,7 @@ main = do
   gen <- R.getStdGen
   args <- getArgs
   let n = (read $ head args) :: Int
-  let init = ms [B 100, L 0 0, L 0 1]
+  let init = ms [B 100, L 0 0, L 0 1, R 2]
   let traj = simulate gen rules init
   printTrajectory $ take n traj
-  where rules :: [Rule]
-        rules = [grow]
+  where rules = [grow, createLeaf, photosynthesis, maintenance]
