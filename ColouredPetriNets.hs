@@ -126,6 +126,7 @@ createLeaf mix = [ rxn age n | (R age, n) <- mix ]
                         , rhs = ms [R (age+1), L m0 age]
                         , rate = fromIntegral n }
 
+-- L m i, B c -> L m i, B (c+f(m,i))
 photosynthesis :: Rule
 photosynthesis mix = [ rxn m i c k n | (L m i, k) <- mix
                                      , (B c, n) <- mix ]
@@ -136,6 +137,7 @@ photosynthesis mix = [ rxn m i c k n | (L m i, k) <- mix
               , rate = fromIntegral k * fromIntegral n }
           where dc = m -- FIXME: add term for the effective area
 
+-- L m i, B c -> L m i, B (c-g(m))
 maintenance :: Rule
 maintenance mix = [ rxn m i c k n | (L m i, k) <- mix
                                   , (B c, n) <- mix ]
