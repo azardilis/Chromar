@@ -4,15 +4,14 @@ import Data.Maybe (fromMaybe, fromJust)
 import Data.List (find, findIndex)
 import System.Environment (getArgs)
 
--- TODO: make these data types parametric on Token
 
-type Multiset = [(Token, Int)]
-data Rxn = Rxn { lhs :: Multiset,
-                 rhs :: Multiset,
-                 rate :: Double }
+type Multiset a = [(a, Int)]
+data Rxn a = Rxn { lhs :: Multiset a,
+                   rhs :: Multiset a,
+                   rate :: Double }
   deriving (Eq, Show)
-type Rule = Multiset -> [Rxn]
-type State = (Multiset, Double, Int) -- (mixture, time, num of steps)
+type Rule a = Multiset a -> [Rxn a]
+type State a = (Multiset a, Double, Int) -- (mixture, time, num of steps)
 
 frequencies :: Eq a => [(a, Int)] -> [a] -> [(a, Int)]
 frequencies acc [] = acc
@@ -21,17 +20,17 @@ frequencies acc (x:xs) = frequencies (update acc) xs
                           | otherwise = (y,n):update ys
         update [] = [(x,1)]
 
-ms :: [Token] -> [(Token, Int)]
+ms :: (Eq a) => [a] -> Multiset a
 ms = frequencies []
 
-diff :: Multiset -> Multiset -> Multiset
+diff :: (Eq a) => Multiset a -> Multiset a -> Multiset a
 diff [] ys = []
 diff ((x,n):xs) ys = sub $ find (\(y,_) -> x == y) ys
   where sub (Just (y,m)) | n-m > 0 = (x,n-m):(diff xs ys)
                          | otherwise = diff xs ys
         sub Nothing = (x,n):(diff xs ys)
 
-plus :: Multiset -> Multiset -> Multiset
+plus :: (Eq a) => Multiset a -> Multiset a -> Multiset a
 plus [] ys = ys
 plus ((x,n):xs) ys = add $ findAndRemove [] (\(y,_) -> x == y) ys
   where add (Just (y,m), ys') = (x,n+m):(plus xs ys')
@@ -42,36 +41,36 @@ findAndRemove acc _ [] = (Nothing, reverse acc)
 findAndRemove acc p (x:xs) | p x = (Just x, (reverse acc) ++ xs)
                            | otherwise = findAndRemove (x:acc) p xs
 
-apply :: Rxn -> Multiset -> Multiset
+apply :: (Eq a) => Rxn a -> Multiset a -> Multiset a
 apply rxn mix = mix `diff` (lhs rxn) `plus` (rhs rxn)
 
-selectRxn :: Double -> Double -> [Rxn] -> Rxn
+selectRxn :: Double -> Double -> [Rxn a] -> Rxn a
 selectRxn _ _ [] = error "deadlock"
 selectRxn _ _ [rxn] = rxn
 selectRxn acc n (rxn:rxns) | n < acc' = rxn
                            | otherwise = selectRxn acc' n rxns
   where acc' = acc + (rate rxn)
 
-sample :: R.StdGen -> [Rxn] -> (Rxn, Double, R.StdGen)
+sample :: R.StdGen -> [Rxn a] -> (Rxn a, Double, R.StdGen)
 sample gen rxns = (selectRxn 0.0 b rxns,  dt, g2)
   where totalProp = sum $ map rate rxns
         (a, g1) = R.randomR (0.0, 1.0) gen
         (b, g2) = R.randomR (0.0, totalProp) g1
         dt = log (1.0/a) / totalProp
 
-step :: [Rule] -> (R.StdGen, State) -> (R.StdGen, State)
+step :: (Eq a) => [Rule a] -> (R.StdGen, State a) -> (R.StdGen, State a)
 step rules (gen, (mix, t, n)) = (gen', (mix', t+dt, n+1))
   where rxns = concatMap (\r -> r mix) rules
         (rxn, dt, gen') = sample gen rxns
         mix' = apply rxn mix
 
-simulate :: R.StdGen -> [Rule] -> Multiset -> [State]
+simulate :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
 simulate gen rules init =
   map snd $ iterate (step rules) (gen, (init, 0.0, 0))
 
-printTrajectory :: [State] -> IO ()
+printTrajectory :: (Show a) => [State a] -> IO ()
 printTrajectory states = mapM_ printMixture states
-  where printMixture :: State -> IO ()
+  where printMixture :: (Show a) => State a -> IO ()
         printMixture (m,t,n) =
           putStrLn $ unwords [show t, show n, show m]
 
@@ -108,10 +107,10 @@ m0 = 0.0
 -- TODO: use quasi-quotes to make the definition of rules simpler
 
 -- L m i, B c -> L (m+1) i, B (c-1)
-grow :: Rule
+grow :: Rule Token
 grow mix = [ rxn m i c k n | (L m i, k) <- mix
                            , (B c, n) <- mix ]
-  where rxn :: Double -> Int -> Double -> Int -> Int -> Rxn
+  where rxn :: Double -> Int -> Double -> Int -> Int -> Rxn Token
         rxn m i c k n =
           Rxn { lhs = ms [L m i, B c]
               , rhs = ms [L (m+1) i, B (c-1)]
@@ -119,18 +118,18 @@ grow mix = [ rxn m i c k n | (L m i, k) <- mix
                        fromIntegral k * fromIntegral n }
 
 -- R age -> R (age+1), L m0 age
-createLeaf :: Rule
+createLeaf :: Rule Token
 createLeaf mix = [ rxn age n | (R age, n) <- mix ]
-  where rxn :: Int -> Int -> Rxn
+  where rxn :: Int -> Int -> Rxn Token
         rxn age n = Rxn { lhs = ms [R age]
                         , rhs = ms [R (age+1), L m0 age]
                         , rate = fromIntegral n }
 
 -- L m i, B c -> L m i, B (c+f(m,i))
-photosynthesis :: Rule
+photosynthesis :: Rule Token
 photosynthesis mix = [ rxn m i c k n | (L m i, k) <- mix
                                      , (B c, n) <- mix ]
-  where rxn :: Double -> Int -> Double -> Int -> Int -> Rxn
+  where rxn :: Double -> Int -> Double -> Int -> Int -> Rxn Token
         rxn m i c k n =
           Rxn { lhs = ms [L m i, B c]
               , rhs = ms [L m i, B (c+dc)]
@@ -138,10 +137,10 @@ photosynthesis mix = [ rxn m i c k n | (L m i, k) <- mix
           where dc = m -- FIXME: add term for the effective area
 
 -- L m i, B c -> L m i, B (c-g(m))
-maintenance :: Rule
+maintenance :: Rule Token
 maintenance mix = [ rxn m i c k n | (L m i, k) <- mix
                                   , (B c, n) <- mix ]
-  where rxn :: Double -> Int -> Double -> Int -> Int -> Rxn
+  where rxn :: Double -> Int -> Double -> Int -> Int -> Rxn Token
         rxn m i c k n =
           Rxn { lhs = ms [L m i, B c]
               , rhs = ms [L m i, B (c-dc)]
