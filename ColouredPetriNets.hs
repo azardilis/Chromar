@@ -74,7 +74,15 @@ printTrajectory states = mapM_ printMixture states
         printMixture (m,t,n) =
           putStrLn $ unwords [show t, show n, show m]
 
+writeTrajectory :: (Show a) => FilePath -> [State a] -> IO ()
+writeTrajectory fn states = 
+        let strStates = map showState states
+        in writeFile fn (unlines strStates)
 
+
+showState :: (Show a) => State a -> String
+showState (m, t, _) = let strElems = (show t) : (map show m) in
+  unwords strElems
 -- Model
 
 data Token = L Double Int -- mass and index
