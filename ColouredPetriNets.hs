@@ -1,10 +1,7 @@
 module ColouredPetriNets where  
 
-import qualified Data.Map as Map
 import qualified System.Random as R
-import Data.Maybe (fromMaybe, fromJust)
-import Data.List (find, findIndex)
-import System.Environment (getArgs)
+import Data.List (find)
 
 
 type Multiset a = [(a, Int)]
@@ -71,15 +68,11 @@ simulate gen rules init =
   map snd $ iterate (step rules) (gen, (init, 0.0, 0))
 
 printTrajectory :: (Show a) => [State a] -> IO ()
-printTrajectory states = mapM_ printMixture states
-  where printMixture :: (Show a) => State a -> IO ()
-        printMixture (m,t,n) =
-          putStrLn $ showState (m, t, n)
+printTrajectory states = mapM_ (putStrLn . showState) states
 
 writeTrajectory :: (Show a) => FilePath -> [State a] -> IO ()
 writeTrajectory fn states = 
-        let strStates = map showState states
-        in writeFile fn (unlines strStates)
+  writeFile fn (unlines $ map showState states)
 
 showState :: (Show a) => State a -> String
 showState (m, t, n) = unwords [show t, show n, show m]

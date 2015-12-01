@@ -80,7 +80,7 @@ main = do
   gen <- R.getStdGen
   args <- getArgs
   let n = (read $ head args) :: Int
-  let init = ms [B 100, L 0 0, L 0 1, R 2]
   let traj = simulate gen rules init
   printTrajectory $ take n traj
   where rules = [grow, createLeaf, photosynthesis, maintenance]
+        init = ms [B 100, L 0 0, L 0 1, R 2]
