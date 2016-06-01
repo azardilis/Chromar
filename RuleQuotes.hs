@@ -17,16 +17,26 @@ mkPatStmts s pats = [BindS (tpat pat) (VarE s) | pat <- pats] where
   tpat p = TupP [p, WildP]
 
 
-mkRxnExp :: SRule -> Exp
-mkRxnExp r = RecConE (mkName "Rxn") fields where
+tuplify :: Name -> Exp -> Exp -> Exp
+tuplify s lhs r = TupE [lhs, VarE s, r]
+
+
+mkRateExp :: Name -> Exp -> Exp -> Exp
+mkRateExp s lhs r = AppE (VarE $ mkName "fullRate") args where
+  args = tuplify s lhs r
+
+
+mkRxnExp :: Name -> SRule -> Exp
+mkRxnExp s r = RecConE (mkName "Rxn") fields where
   lhsSym  = mkName "lhs"
   rhsSym  = mkName "rhs"
   rateSym = mkName "rate"
   lexps'  = AppE (VarE $ mkName "ms") (ListE $ lexps r)
   rexps'  = AppE (VarE $ mkName "ms") (ListE $ rexps r)
+  rateExp = mkRateExp s lexps' (rate r) 
   fields  = [ (lhsSym , lexps'),
               (rhsSym , rexps'),
-              (rateSym, rate r)
+              (rateSym, rateExp)
             ]
 
 
@@ -40,7 +50,7 @@ mkGuardStmt = NoBindS
 
 mkCompStmts :: Name -> SRule -> [Stmt]
 mkCompStmts s r = patStmts ++ [guardStmt, retStmt] where
-  rxnExp    = mkRxnExp r
+  rxnExp    = mkRxnExp s r
   patStmts  = mkPatStmts s (lpats r)
   retStmt   = mkReturnStmt rxnExp
   guardStmt = mkGuardStmt (cond r)
