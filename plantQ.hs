@@ -22,14 +22,21 @@ initState = ms [L{m=0.01}, L{m=0.02}, B{c=2}, R{n=2}]
 
 
 --- observables
-rosetteMass :: Multiset Token -> Observable
-rosetteMass s = ObsDouble (sum [m * fromIntegral n | (L{m=m}, n) <- s])
+rosetteMass :: ObservableGen Token
+rosetteMass = ObservableGen { name = "rosetteMass",
+                              gen  = calcRosetteMass } where
+  calcRosetteMass s = ObsDouble (sum [m * fromIntegral n | (L{m=m}, n) <- s])
 
-carbon :: Multiset Token -> Observable
-carbon s = ObsDouble (sum [c | (B{c=c}, _) <- s])
+carbon :: ObservableGen Token
+carbon = ObservableGen { name = "carbon",
+                         gen  = getCarbon } where
+  getCarbon s = ObsDouble (sum [c | (B{c=c}, _) <- s])
 
-nLeaves :: Multiset Token -> Observable
-nLeaves s = ObsInt (sum [n | (R{n=n}, _) <- s])
+nLeaves :: ObservableGen Token
+nLeaves = ObservableGen { name = "nLeaves",
+                          gen  = getLeaves } where
+  getLeaves s = ObsInt (sum [n | (R{n=n}, _) <- s])
+  
 
 
 --- invariants
@@ -41,9 +48,9 @@ countLs s = sum [n | (L{m=m}, n) <- s]
 main :: IO ()
 main = do
   gen <- R.getStdGen
-  let n = 1000
+  let n = 2000
   let traj = simulate gen rules initState
   plotOut "plot.png" (take n traj) observables where
     rules = [growth, assimilation, leafCreation]
-    observables = [rosetteMass, carbon]
+    observables = [rosetteMass, carbon, nLeaves]
 
