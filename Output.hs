@@ -6,8 +6,14 @@ import Graphics.Gnuplot.Simple as G
 import Data.List (intercalate, transpose)
 
 
+data ObservableGen a = ObservableGen { name :: String,
+                                       gen  :: Multiset a -> Observable }
+
 data Observable = ObsInt Int
                 | ObsDouble Double
+
+instance Show (ObservableGen a) where
+  show (ObservableGen {name = n, gen = _ }) = n
 
 instance Show Observable where
   show (ObsInt n)    = show n
@@ -27,14 +33,21 @@ applyObs ss fs = [zip ts (map f xs) | f <- fs] where
   ts = getTs ss
 
 
-plotOut :: (Show a) => FilePath -> [State a] -> [Multiset a -> Observable] -> IO ()
-plotOut fn ss fs = G.plotLists [PNG fn] obs where
-  obs = applyObs ss fs
+mkStyle :: String -> PlotStyle
+mkStyle x = defaultStyle { lineSpec = CustomStyle [LineTitle x] }
 
 
-printOut :: (Show a) => [State a] -> [Multiset a -> Observable] -> IO ()
+plotOut :: (Show a) => FilePath -> [State a] -> [ObservableGen a] -> IO ()
+plotOut fn ss fs = G.plotListsStyle [PNG fn] obsStyles where
+  obs       = applyObs ss (map gen fs)
+  names     = map name fs
+  styles    = map mkStyle names
+  obsStyles = zip styles obs
+
+
+printOut :: (Show a) => [State a] -> [ObservableGen a] -> IO ()
 printOut ss fs = showObs obs where
-  obs = applyObs ss fs
+  obs = applyObs ss (map gen fs)
 
 
 getObsOnly :: [(Time, Observable)] -> [Observable]
