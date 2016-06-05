@@ -9,8 +9,23 @@ data Rxn a = Rxn { lhs :: Multiset a,
                    rhs :: Multiset a,
                    rate :: Double }
   deriving (Eq, Show)
+           
 type Rule a = Multiset a -> [Rxn a]
-type State a = (Multiset a, Double, Int) -- (mixture, time, num of steps)
+type Time = Double
+type State a = (Multiset a, Time, Int) -- (mixture, time, num of steps)
+
+
+getM :: State a -> Multiset a
+getM (m, _, _) = m
+
+getMs :: [State a] -> [Multiset a]
+getMs = map getM
+
+getT :: State a -> Time
+getT (_, t, _) = t
+
+getTs :: [State a] -> [Time]
+getTs = map getT
 
 
 frequencies :: Eq a => [(a, Int)] -> [a] -> [(a, Int)]
