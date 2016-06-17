@@ -3,7 +3,7 @@
 import qualified System.Random as R
 import RuleQuotes
 import ColouredPetriNets
-import Output
+import Observables
 
 
 --- Agents
@@ -48,9 +48,9 @@ nLeaves = Observable { name = "nLeaves",
 --- run
 main :: IO ()
 main = do
-  gen <- R.getStdGen
+  rgen <- R.getStdGen
   let n = 1000000
-  let traj = take n (simulate gen rules initState)
+  let traj = take n (simulate rgen rules initState)
   printObs traj observables where
     rules = [growth, assimilation, leafCreation]
     observables = [rosMass, carbon, nLeaves]

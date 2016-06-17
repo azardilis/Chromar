@@ -1,4 +1,4 @@
-module Output where
+module Observables where
 
 import ColouredPetriNets
 
