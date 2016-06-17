@@ -1,64 +1,74 @@
 module Output where
 
 import ColouredPetriNets
-import Graphics.Gnuplot.Value.Tuple
-import Graphics.Gnuplot.Simple as G
-import Data.List (intercalate, transpose)
+
+type Obs = Double
+type ObsF a = Multiset a -> Obs
+type TObs = (Time, [Obs])
+
+data Observable a = Observable { name :: String,
+                                 gen  :: ObsF a}
 
 
-data ObservableGen a = ObservableGen { name :: String,
-                                       gen  :: Multiset a -> Observable }
-
-data Observable = ObsInt Int
-                | ObsDouble Double
-
-instance Show (ObservableGen a) where
-  show (ObservableGen {name = n, gen = _ }) = n
-
-instance Show Observable where
-  show (ObsInt n)    = show n
-  show (ObsDouble x) = show x
-
-singl :: a -> [a]
-singl = (:[])
-
-instance C Observable where
-  text (ObsInt n)    = (singl . shows) n
-  text (ObsDouble x) = (singl . shows) x
+names :: [Observable a] -> [String]
+names = map name
 
 
-applyObs :: [State a] -> [Multiset a -> Observable] -> [[(Time, Observable)]]
-applyObs ss fs = [zip ts (map f xs) | f <- fs] where
-  xs = getMs ss
-  ts = getTs ss
+gens :: [Observable a] -> [ObsF a]
+gens = map gen
 
 
-mkStyle :: String -> PlotStyle
-mkStyle x = defaultStyle { lineSpec = CustomStyle [LineTitle x] }
+select :: (a->Bool) -> Multiset a -> Multiset a
+select f m = filter (\(el, _) -> f el) m
 
 
-plotOut :: (Show a) => FilePath -> [State a] -> [ObservableGen a] -> IO ()
-plotOut fn ss fs = G.plotListsStyle [PNG fn] obsStyles where
-  obs       = applyObs ss (map gen fs)
-  names     = map name fs
-  styles    = map mkStyle names
-  obsStyles = zip styles obs
+aggregate :: (a->Int->Obs->Obs) -> Obs -> Multiset a -> Obs
+aggregate f v m = foldr (\(el, n) s -> f el n s) v m
 
 
-printOut :: (Show a) => [State a] -> [ObservableGen a] -> IO ()
-printOut ss fs = showObs obs where
-  obs = applyObs ss (map gen fs)
+sumM :: (a->Obs) -> Multiset a -> Obs
+sumM f m = sum (map (\(el, n) -> f el * fromIntegral n) m)
 
 
-getObsOnly :: [(Time, Observable)] -> [Observable]
-getObsOnly = map snd
+countM :: Multiset a -> Obs
+countM s = sum [fromIntegral n | (el, n) <- s]
 
 
-show' :: [(Time, Observable)] -> IO ()
-show' tobs = print (show t ++ " " ++ (unwords . map show) obs) where
-  obs = getObsOnly tobs
-  t = fst (head tobs)
+selectAttr :: (Eq b) => (a->b) -> b -> Multiset a -> Multiset a
+selectAttr f v = filter (\(el, _) -> f el == v)
+
+                         
+applyObs :: [State a] -> [ObsF a] -> [TObs]
+applyObs ss fs = [(t, map ($ s) fs) | (State s t _) <- ss]
 
 
-showObs :: [[(Time, Observable)]] -> IO ()
-showObs obss = mapM_ show' (transpose obss)
+printObs :: (Show a) => [State a] -> [Observable a] -> IO ()
+printObs ss fs = do
+  putStrLn header
+  showObs obs where
+    obs = applyObs ss (gens fs)
+    obsNames = names fs
+    header = unwords ("time" : obsNames)
+
+
+show' :: TObs -> IO ()
+show' tobs = putStrLn $ showTObs tobs
+
+
+showObs :: [TObs] -> IO ()
+showObs = mapM_  show'
+
+
+showTObs :: TObs -> String
+showTObs (t, obss) = show t ++ " " ++ obssS where
+  obssS = unwords (map show obss)
+
+
+writeObs :: (Show a) => FilePath -> [State a] -> [Observable a] -> IO ()
+writeObs fn ss fs = do
+  writeFile fn (unlines obsS) where
+    obs      = applyObs ss (gens fs)
+    obsNames = names fs
+    header   = unwords ("time" : obsNames)
+    obsS     = header : (map showTObs obs)
+

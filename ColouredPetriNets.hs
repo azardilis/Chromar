@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module ColouredPetriNets where  
 
 import qualified System.Random as R
@@ -5,24 +7,29 @@ import Data.List (find)
 
 
 type Multiset a = [(a, Int)]
+
 data Rxn a = Rxn { lhs :: Multiset a,
                    rhs :: Multiset a,
                    rate :: Double }
   deriving (Eq, Show)
            
 type Rule a = Multiset a -> [Rxn a]
-type Time = Double
-type State a = (Multiset a, Time, Int) -- (mixture, time, num of steps)
 
+type Time = Double
+
+data State a = State (Multiset a) !Time !Int -- (mixture, time, num of steps)
+
+instance (Show a) => Show (State a) where
+  show (State m t n) = show m ++ show t ++ show n
 
 getM :: State a -> Multiset a
-getM (m, _, _) = m
+getM (State m _ _) = m
 
 getMs :: [State a] -> [Multiset a]
 getMs = map getM
 
 getT :: State a -> Time
-getT (_, t, _) = t
+getT (State _ t _) = t
 
 getTs :: [State a] -> [Time]
 getTs = map getT
@@ -103,7 +110,7 @@ sample gen rxns = (selectRxn 0.0 b rxns,  dt, g2)
 
 
 step :: (Eq a) => [Rule a] -> (R.StdGen, State a) -> (R.StdGen, State a)
-step rules (gen, (mix, t, n)) = (gen', (mix', t+dt, n+1))
+step rules (gen, State mix t n) = (gen', State mix' (t+dt) (n+1))
   where rxns = concatMap (\r -> r mix) rules
         actRxns = filter (\r -> rate r > 0.0) rxns
         (rxn, dt, gen') = sample gen actRxns
@@ -112,7 +119,7 @@ step rules (gen, (mix, t, n)) = (gen', (mix', t+dt, n+1))
 
 simulate :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
 simulate gen rules init =
-  map snd $ iterate (step rules) (gen, (init, 0.0, 0))
+  map snd $ iterate (step rules) (gen, State init 0.0 0)
 
 
 printTrajectory :: (Show a) => [State a] -> IO ()
@@ -125,4 +132,5 @@ writeTrajectory fn states =
 
 
 showState :: (Show a) => State a -> String
-showState (m, t, n) = unwords [show t, show n, show m]
+showState (State m t n) = unwords [show t, show n, show m]
+
