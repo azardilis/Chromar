@@ -18,14 +18,18 @@ data SRule = SRule { lpats :: [Pat],
 parseAgent :: Parser String
 parseAgent = do
   spaces
-  s <- many1 (noneOf [',', '}'])
+  skipMany newline
+  s <- many1 (noneOf ['}'])
   char '}'
   spaces
+  skipMany newline
   return (s ++ "}")
 
 
 parseRuleSide :: Parser [String]
 parseRuleSide = do
+  spaces
+  skipMany newline
   spaces
   sepBy parseAgent (char ',')
 
@@ -41,15 +45,17 @@ parseRate :: Parser String
 parseRate = do
   char '@'
   spaces
-  many (noneOf "( ")
+  skipMany newline
+  spaces
+  many1 (noneOf ['['])
 
 
 parseCond :: Parser String
 parseCond = do
-  char '('
+  char '['
   spaces
-  p <- many1 (noneOf ")")
-  char ')'
+  p <- many1 (noneOf "]")
+  char ']'
   return p
   
 
@@ -76,6 +82,8 @@ parseRule = do
   left <- parseRuleSide
   arrowSpaces
   right <- parseRuleSide
+  spaces
+  skipMany newline
   spaces
   r <- parseRate
   spaces
