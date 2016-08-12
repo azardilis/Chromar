@@ -12,6 +12,8 @@ data Rxn a = Rxn { lhs :: Multiset a,
                    rhs :: Multiset a,
                    rate :: Double }
   deriving (Eq, Show)
+
+
            
 type Rule a = Multiset a -> [Rxn a]
 
@@ -21,6 +23,10 @@ data State a = State (Multiset a) !Time !Int -- (mixture, time, num of steps)
 
 instance (Show a) => Show (State a) where
   show (State m t n) = show m ++ show t ++ show n
+
+
+data Model a = Model { rules     :: [Rule a],
+                       initState :: Multiset a }
 
 getM :: State a -> Multiset a
 getM (State m _ _) = m
@@ -133,4 +139,3 @@ writeTrajectory fn states =
 
 showState :: (Show a) => State a -> String
 showState (State m t n) = unwords [show t, show n, show m]
-
