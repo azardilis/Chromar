@@ -1,5 +1,6 @@
 module Observables where
 
+import qualified System.Random as R
 import ColouredPetriNets
 
 type Obs = Double
@@ -19,11 +20,11 @@ gens = map gen
 
 
 select :: (a->Bool) -> Multiset a -> Multiset a
-select f m = filter (\(el, _) -> f el) m
+select f = filter (\(el, _) -> f el)
 
 
 aggregate :: (a->Int->Obs->Obs) -> Obs -> Multiset a -> Obs
-aggregate f v m = foldr (\(el, n) s -> f el n s) v m
+aggregate f = foldr (\(el, n) s -> f el n s)
 
 
 sumM :: (a->Obs) -> Multiset a -> Obs
@@ -37,7 +38,7 @@ countM s = sum [fromIntegral n | (el, n) <- s]
 selectAttr :: (Eq b) => (a->b) -> b -> Multiset a -> Multiset a
 selectAttr f v = filter (\(el, _) -> f el == v)
 
-                         
+
 applyObs :: [State a] -> [ObsF a] -> [TObs]
 applyObs ss fs = [(t, map ($ s) fs) | (State s t _) <- ss]
 
@@ -65,10 +66,22 @@ showTObs (t, obss) = show t ++ " " ++ obssS where
 
 
 writeObs :: (Show a) => FilePath -> [State a] -> [Observable a] -> IO ()
-writeObs fn ss fs = do
-  writeFile fn (unlines obsS) where
+writeObs fn ss fs = writeFile fn (unlines obsS) where
     obs      = applyObs ss (gens fs)
     obsNames = names fs
     header   = unwords ("time" : obsNames)
-    obsS     = header : (map showTObs obs)
+    obsS     = header : map showTObs obs
 
+
+run :: (Eq a, Show a) => Model a -> Int -> [Observable a] -> IO ()
+run (Model {rules=rs, initState=s})  n obss = do
+  rgen <- R.getStdGen
+  let traj = take n (simulate rgen rs s)
+  printObs traj obss
+
+
+runW :: (Eq a, Show a) => Model a -> Int -> FilePath -> [Observable a] -> IO ()
+runW (Model {rules=rs, initState=s})  n fn obss = do
+  rgen <- R.getStdGen
+  let traj = take n (simulate rgen rs s)
+  writeObs fn traj obss
