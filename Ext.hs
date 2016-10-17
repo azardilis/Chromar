@@ -21,10 +21,53 @@ rule = QuasiQuoter { quoteExp  = ruleQuoter,
                      quoteType = undefined }
 
 
+tuplify :: Name -> Exp -> Exp -> Exp
+tuplify s lhs r = TupE [lhs, VarE s, r]
+
+
+mkRateExp :: Name -> Exp -> Exp -> Exp
+mkRateExp s lhs r = AppE (VarE $ mkName "fullRate") args where
+  args = tuplify s lhs r
+
+
+mkReturnStmt :: Exp -> Stmt
+mkReturnStmt = NoBindS
+
+
+mkRxnExp :: Name -> SRule -> Exp
+mkRxnExp s r = RecConE (mkName "Rxn") fields where
+  lhsSym  = mkName "lhs"
+  rhsSym  = mkName "rhs"
+  rateSym = mkName "rate"
+  lexps'  = AppE (VarE $ mkName "ms") (ListE $ lexps r)
+  rexps'  = AppE (VarE $ mkName "ms") (ListE $ rexps r)
+  rateExp = mkRateExp s lexps' (rate r) 
+  fields  = [ (lhsSym , lexps'),
+              (rhsSym , rexps'),
+              (rateSym, rateExp)
+            ]
+
+
+mkCompStmts :: Name -> SRule -> Q [Stmt]
+mkCompStmts s r = do
+  let rxnExp = mkRxnExp s r
+  let retStmt   = mkReturnStmt rxnExp
+  let guardStmt = NoBindS (cond r)
+  patStmts  <- mkLhs (lexps r)
+  return $ patStmts ++ [guardStmt, retStmt]
+
+
+ruleQuoter' :: SRule -> Q Exp
+ruleQuoter' r = do
+  state <- newName "s"
+  stmts <- mkCompStmts state r
+  return $ LamE [VarP state] (CompE stmts)
+
+
 ruleQuoter :: String -> Q Exp
-ruleQuoter s = case parse parseRuleSide "" s of
+ruleQuoter s = case parse parseRule "" s of
   Left err  -> error (show err)
-  Right r   -> foo' r
+  Right r   -> ruleQuoter' r
 
 
 --- pure action
@@ -66,7 +109,7 @@ mkAgentExps qfps = do
 
 mkPatStmt :: Name -> [FieldPat] -> Stmt
 mkPatStmt nm fpats = BindS pat (VarE $ mkName "s") where
-  pat = RecP nm fpats
+  pat = TupP [RecP nm fpats, WildP]
 
 
 mkGuardStmt :: Exp -> Stmt
