@@ -8,8 +8,7 @@ import Language.Haskell.Meta.Parse
 import Control.Monad
 
 
-data SRule = SRule { lpats :: [Pat],
-                     lexps :: [Exp],
+data SRule = SRule { lexps :: [Exp],
                      rexps :: [Exp],
                      rate  :: Exp,
                      cond  :: Exp } deriving (Show)
@@ -88,8 +87,7 @@ parseRule = do
   r <- parseRate
   spaces
   c <- parseCond
-  return SRule{ lpats = createPats left,
-                lexps = createExps left,
+  return SRule{ lexps = createExps left,
                 rexps = createExps right,
                 rate  = createExp r,
                 cond  = createExp c }
