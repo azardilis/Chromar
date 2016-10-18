@@ -3,14 +3,14 @@
 import ColouredPetriNets
 import Ext
 
-data Agent = A { a :: Int, b :: Int}
-           | B { c :: Int} deriving (Eq, Show)  
+data Agent = A { a :: Int }
+           | B { b :: Int } deriving (Eq, Show)  
 
 
-s :: Multiset Agent
-s = ms [A{a=1, b=2}, B{c=1}]
+state :: Multiset Agent
+state = ms [A{a=1}, A{a=2}, B{b=2}]
 
 
-r = [rule|A{a=x, b=y}, B{c=x} --> A{a=x, b=y}, B{c=x+1} @1.0 [True]|]
+r = [rule|A{a=x}, A{a=x+1} --> A{a=x}, A{a=x+1} @1.0 [True] |]
 
 
