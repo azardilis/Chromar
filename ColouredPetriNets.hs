@@ -15,7 +15,7 @@ data Rxn a = Rxn { lhs :: Multiset a,
 
 
            
-type Rule a = Multiset a -> [Rxn a]
+type Rule a = Multiset a -> Time -> [Rxn a]
 
 type Time = Double
 
@@ -117,7 +117,7 @@ sample gen rxns = (selectRxn 0.0 b rxns,  dt, g2)
 
 step :: (Eq a) => [Rule a] -> (R.StdGen, State a) -> (R.StdGen, State a)
 step rules (gen, State mix t n) = (gen', State mix' (t+dt) (n+1))
-  where rxns = concatMap (\r -> r mix) rules
+  where rxns = concatMap (\r -> r mix t) rules
         actRxns = filter (\r -> rate r > 0.0) rxns
         (rxn, dt, gen') = sample gen actRxns
         mix' = apply rxn mix
