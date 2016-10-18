@@ -2,7 +2,7 @@
 {-# LANGUAGE  TemplateHaskell #-}
 
 import ColouredPetriNets
-import Ext
+import RuleQuotes
 import Fluent
 
 
