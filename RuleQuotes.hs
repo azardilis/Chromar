@@ -1,4 +1,4 @@
-module Ext where
+module RuleQuotes where
 
 import Language.Haskell.TH
 import Language.Haskell.Meta.Parse
@@ -7,7 +7,6 @@ import Language.Haskell.TH.Syntax
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Text.ParserCombinators.Parsec
-import Language.Haskell.Exts.Pretty
 import Data.List
 import RuleParser
 
@@ -25,12 +24,11 @@ rule = QuasiQuoter { quoteExp  = ruleQuoter,
 --- pure action
 tFieldPat :: Set Name -> Name -> FieldExp -> FieldProd
 tFieldPat names freshNm (nm, VarE pnm) =
-  case (Set.member pnm names) of
-    False -> ((nm, VarP pnm), [], Set.fromList [pnm])
-    True ->
-      ( (nm, VarP freshNm)
-      , [UInfixE (VarE freshNm) (VarE $ mkName "==") (VarE pnm)]
-      , Set.empty )
+  if Set.member pnm names
+    then ( (nm, VarP freshNm)
+         , [UInfixE (VarE freshNm) (VarE $ mkName "==") (VarE pnm)]
+         , Set.empty)
+    else ((nm, VarP pnm), [], Set.fromList [pnm])
 tFieldPat name freshNm (nm, exp) =
   ( (nm, VarP freshNm)
   , [UInfixE (VarE freshNm) (VarE $ mkName "==") exp]
@@ -56,7 +54,7 @@ mkAgentExps qfps = do
   let (fpats, exprss, sets) = unzip3 fps
   let guardExp = mkGuardExp exprss
   let sn = Set.unions sets
-  return $ (fpats, guardExp, sn)
+  return (fpats, guardExp, sn)
 
 
 mkPatStmt :: Name -> [FieldPat] -> Stmt
@@ -73,7 +71,7 @@ mkAgentStmts nm qexps = do
   (fpats, gExp, sn) <- qexps
   let patStmt = mkPatStmt nm fpats
   let guardStmt = mkGuardStmt gExp
-  return $ ([patStmt, guardStmt], sn)
+  return ([patStmt, guardStmt], sn)
 
 
 tAgentPat :: Set Name -> Exp -> Q ([Stmt], Set Name)
@@ -83,43 +81,20 @@ tAgentPat sn (RecConE nm fexps) = mkAgentStmts nm qexps where
 
 
 mkLhsStmts :: Set Name -> [Stmt] -> [Exp] -> Q [Stmt]
-mkLhsStmts sn allStmts [] = return $ allStmts
+mkLhsStmts sn allStmts [] = return allStmts
 mkLhsStmts sn allStmts (exp:exps) = do
   (stmts, sn') <- tAgentPat sn exp
   mkLhsStmts (Set.union sn sn') (allStmts ++ stmts) exps
 
 
 mkLhs :: [Exp] -> Q [Stmt]
-mkLhs exps = mkLhsStmts Set.empty [] exps
-
-
-mkLhsExp :: Q Exp
-mkLhsExp = do
-  state <- newName "s"
-  return $
-    LamE
-      [VarP state]
-      (UInfixE (VarE $ mkName "s") (VarE $ mkName "==") (LitE (IntegerL 1)))
-
-
-foo :: Set Name -> Exp -> Q Exp
-foo sn exp = do
-  (stmts, sn) <- tAgentPat sn exp
-  stringE (show stmts)
-
-
-foo' :: [String] -> Q Exp
-foo' rs = do
-  let exprs = createExps rs
-  stmts <- mkLhs exprs
-  stringE (show stmts)
-
+mkLhs = mkLhsStmts Set.empty []
 
 
 isFluent :: Info -> Bool
 isFluent (VarI m t _ _) =
   case t of
-    (AppT (ConT tnm) _) -> isSuffixOf "Fluent" (show tnm)
+    (AppT (ConT tnm) _) -> "Fluent" `isSuffixOf` show tnm
     _ -> False
 isFluent _ = False
 
@@ -131,10 +106,10 @@ mkFApp nm = ParensE (AppE (AppE (VarE $ mkName "at")  (VarE nm)) (VarE $ mkName 
 tStmt :: Stmt -> Q Stmt
 tStmt (BindS p e) = do
   te <- tExp e
-  return $ (BindS p te)
+  return $ BindS p te
 tStmt (NoBindS e) = do
   te <- tExp e
-  return $ (NoBindS te)
+  return $ NoBindS te
 
 
 tMExp :: Maybe Exp -> Q (Maybe Exp)
@@ -148,7 +123,7 @@ tMExp Nothing  = return Nothing
 tExp :: Exp -> Q Exp
 tExp var@(VarE nm) = do
   info <- reify nm
-  if (isFluent info)
+  if isFluent info
     then return $ mkFApp nm
     else return var
 tExp (AppE e1 e2) = do
@@ -165,22 +140,22 @@ tExp (UInfixE e1 e2 e3) = do
   te1 <- tExp e1
   te2 <- tExp e2
   te3 <- tExp e3
-  return $ (UInfixE te1 te2 te3)
+  return $ UInfixE te1 te2 te3
 tExp (ParensE e) = do
   te <- tExp e
-  return $ (ParensE te)
+  return $ ParensE te
 tExp (LamE pats e) = do
   te <- tExp e
-  return $ (LamE pats te)
+  return $ LamE pats te
 tExp (CompE stmts) = do
   tstmts <- mapM tStmt stmts
-  return $ (CompE tstmts)
+  return $ CompE tstmts
 tExp (InfixE me1 e me2) = do
   tme1 <- tMExp me1
   te   <- tExp e
   tme2 <- tMExp me2
-  return $ (InfixE tme1 te tme2)
-tExp (LitE lit) = return $ (LitE lit)
+  return $ InfixE tme1 te tme2
+tExp (LitE lit) = return $ LitE lit
 tExp _ = undefined
 
 
@@ -229,14 +204,14 @@ ruleQuoter' r = do
 
 
 fluentTransform :: SRule -> Q SRule
-fluentTransform (SRule { lexps = les
+fluentTransform SRule { lexps = les
                        , rexps = res
                        , rate = r
                        , cond = c
-                       }) = do
+                       } = do
   re <- tExp r
   ce <- tExp c
-  return $ SRule {lexps = les, rexps = res, rate = re, cond = ce}
+  return SRule {lexps = les, rexps = res, rate = re, cond = ce}
 
 
 ruleQuoter :: String -> Q Exp
