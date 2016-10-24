@@ -156,6 +156,7 @@ tExp (InfixE me1 e me2) = do
   tme2 <- tMExp me2
   return $ InfixE tme1 te tme2
 tExp (LitE lit) = return $ LitE lit
+tExp (ConE nm) = return $ ConE nm
 tExp _ = undefined
 
 
