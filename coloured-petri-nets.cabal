@@ -7,29 +7,32 @@ synopsis:            none
 -- description:         
 homepage:            none
 -- license:             
-license-file:        LICENSE
+-- license-file:        
 author:              none
 maintainer:          none
 -- copyright:           
 -- category:            
 build-type:          Simple
-extra-source-files:  README.md models/plantQ.hs
-cabal-version:       >=1.10
+cabal-version:       >=1.6
 
 library
-  exposed-modules:     ColouredPetriNets, Observables, RuleParser, RuleQuotes
-  -- other-modules:       
-  other-extensions: BangPatterns
-  build-depends:       base >=4.8 && <4.9, random >=1.1 && <1.2, parsec >=3.1 && <3.2, template-haskell >=2.10 && <2.11, haskell-src-meta >=0.6 && <0.7
-  default-language:    Haskell2010
+  build-depends:      base >=4.8 && <4.9,
+                      random >=1.1 && <1.2,
+                      parsec >=3.1 && <3.2,
+                      template-haskell >=2.10 && <2.11,
+                      haskell-src-meta >= 0.6,
+                      containers >=0.5
+		 
+  hs-source-dirs:     src
+  
+  exposed-modules:    Chromar.Core
+                      Chromar.Observables
+                      Chromar.RuleParser
+                      Chromar.RuleQuotes
+                      Chromar.Fluent
+                      Chromar.Multiset
+                      Chromar
+   
+  other-extensions:   BangPatterns
 
-
-executable plantQ
---  ghc-options: -Wall 
-  other-extensions: QuasiQuotes
-  main-is: models/plantQ.hs
-  build-depends:       base >=4.8 && <4.9, random >=1.1 && <1.2, parsec >=3.1 && <3.2, template-haskell >=2.10 && <2.11, haskell-src-meta >=0.6 && <0.7
-  default-language:    Haskell2010
-  
-  
-  
+  default-language:   Haskell2010
