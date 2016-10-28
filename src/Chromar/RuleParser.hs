@@ -1,4 +1,4 @@
-module RuleParser where
+module Chromar.RuleParser where
 
 import Text.ParserCombinators.Parsec.Combinator
 import Text.ParserCombinators.Parsec
@@ -11,7 +11,7 @@ import Control.Monad
 data SRule = SRule { lpats :: [Pat],
                      lexps :: [Exp],
                      rexps :: [Exp],
-                     rate  :: Exp,
+                     srate  :: Exp,
                      cond  :: Exp } deriving (Show)
                              
 
@@ -91,7 +91,7 @@ parseRule = do
   return SRule{ lpats = createPats left,
                 lexps = createExps left,
                 rexps = createExps right,
-                rate  = createExp r,
+                srate  = createExp r,
                 cond  = createExp c }
 
 --- for testing

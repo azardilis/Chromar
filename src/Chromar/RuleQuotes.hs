@@ -1,9 +1,9 @@
-module RuleQuotes where
+module Chromar.RuleQuotes where
 
 import Language.Haskell.TH 
 import Language.Haskell.TH.Quote
 import Text.ParserCombinators.Parsec
-import RuleParser
+import Chromar.RuleParser
 
 rule :: QuasiQuoter
 rule = QuasiQuoter { quoteExp  = ruleQuoter,
@@ -33,7 +33,7 @@ mkRxnExp s r = RecConE (mkName "Rxn") fields where
   rateSym = mkName "rate"
   lexps'  = AppE (VarE $ mkName "ms") (ListE $ lexps r)
   rexps'  = AppE (VarE $ mkName "ms") (ListE $ rexps r)
-  rateExp = mkRateExp s lexps' (rate r) 
+  rateExp = mkRateExp s lexps' (srate r) 
   fields  = [ (lhsSym , lexps'),
               (rhsSym , rexps'),
               (rateSym, rateExp)
