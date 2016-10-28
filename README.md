@@ -2,7 +2,6 @@
 
 ### Quick start
 * Install the [stack](https://docs.haskellstack.org/en/stable/README/#how-to-install) tool
-* Clone or download the repository
 * Install the Chromar library
 ```
 % cd coloured-petri-nets
@@ -18,7 +17,7 @@ ghci> let r = [rule| A{x=x} --> A{x=x+1} @x [True] |]
 ghci> r state -- get all concrete reactions from rule r
 ```
 or
-* Write a model to a file and then load in the repl (see example models in the /model directory)
+* Write a model to a file and then load in the repl (see example models in the /models directory)
 ```
 % stack ghci
 ghci> :l Model
