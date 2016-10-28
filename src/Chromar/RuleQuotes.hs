@@ -187,7 +187,7 @@ mkRxnExp s r = RecConE (mkName "Rxn") fields where
   rateSym = mkName "rate"
   lexps'  = AppE (VarE $ mkName "ms") (ListE $ lexps r)
   rexps'  = AppE (VarE $ mkName "ms") (ListE $ rexps r)
-  rateExp = mkRateExp s lexps' (rate r) 
+  rateExp = mkRateExp s lexps' (srate r) 
   fields  = [ (lhsSym , lexps'),
               (rhsSym , rexps'),
               (rateSym, rateExp)
@@ -214,12 +214,12 @@ ruleQuoter' r = do
 fluentTransform :: SRule -> Q SRule
 fluentTransform SRule { lexps = les
                        , rexps = res
-                       , rate = r
+                       , srate = r
                        , cond = c
                        } = do
   re <- tExp r
   ce <- tExp c
-  return SRule {lexps = les, rexps = res, rate = re, cond = ce}
+  return SRule {lexps = les, rexps = res, srate = re, cond = ce}
 
 
 ruleQuoter :: String -> Q Exp

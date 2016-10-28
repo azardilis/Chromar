@@ -10,7 +10,7 @@ import Control.Monad
 
 data SRule = SRule { lexps :: [Exp],
                      rexps :: [Exp],
-                     rate  :: Exp,
+                     srate  :: Exp,
                      cond  :: Exp } deriving (Show)
                              
 
@@ -89,7 +89,7 @@ parseRule = do
   c <- parseCond
   return SRule{ lexps = createExps left,
                 rexps = createExps right,
-                rate  = createExp r,
+                srate  = createExp r,
                 cond  = createExp c }
 
 --- for testing
