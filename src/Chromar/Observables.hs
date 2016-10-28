@@ -1,7 +1,9 @@
-module Observables where
+module Chromar.Observables where
 
 import qualified System.Random as R
-import ColouredPetriNets
+import Chromar.Multiset
+import Chromar.Core
+
 
 type Obs = Double
 type ObsF a = Multiset a -> Obs

@@ -1,4 +1,4 @@
-module RuleQuotes where
+module Chromar.RuleQuotes where
 
 import Language.Haskell.TH
 import Language.Haskell.Meta.Parse
@@ -8,7 +8,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Text.ParserCombinators.Parsec
 import Data.List
-import RuleParser
+import Chromar.RuleParser
 
 
 type FieldProd = (FieldPat, [Exp], Set Name)
@@ -119,13 +119,20 @@ tMExp (Just e) = do
 tMExp Nothing  = return Nothing
 
 
+tName :: Maybe Name -> Exp -> Q Exp
+tName (Just nm) exp = do
+  info <- reify nm
+  if isFluent info
+     then return $ mkFApp nm
+     else return exp     
+tName Nothing exp = return exp
+
+
 --- there's probably a better way of doing this
 tExp :: Exp -> Q Exp
 tExp var@(VarE nm) = do
-  info <- reify nm
-  if isFluent info
-    then return $ mkFApp nm
-    else return var
+  mnm <- lookupValueName (show nm)
+  tName mnm var
 tExp (AppE e1 e2) = do
   te1 <- tExp e1
   te2 <- tExp e2

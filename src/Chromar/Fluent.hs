@@ -1,4 +1,4 @@
-module Fluent
+module Chromar.Fluent
     ( Time,
       Fluent,
       at,

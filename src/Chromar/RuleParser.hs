@@ -1,4 +1,4 @@
-module RuleParser where
+module Chromar.RuleParser where
 
 import Text.ParserCombinators.Parsec.Combinator
 import Text.ParserCombinators.Parsec
