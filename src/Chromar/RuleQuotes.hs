@@ -164,9 +164,18 @@ tExp (InfixE me1 e me2) = do
   return $ InfixE tme1 te tme2
 tExp (LitE lit) = return $ LitE lit
 tExp (ConE nm) = return $ ConE nm
+tExp (RecConE nm fexps) = do
+  tfexps <- mapM tFExp fexps
+  return $ RecConE nm tfexps
 tExp _ = undefined
 
 
+tFExp :: FieldExp -> Q FieldExp
+tFExp (nm, exp) = do
+  te <- tExp exp
+  return (nm, te)
+
+         
 tuplify :: Name -> Exp -> Exp -> Exp
 tuplify s lhs r = TupE [lhs, VarE s, r]
 
@@ -217,9 +226,10 @@ fluentTransform SRule { lexps = les
                        , srate = r
                        , cond = c
                        } = do
-  re <- tExp r
-  ce <- tExp c
-  return SRule {lexps = les, rexps = res, srate = re, cond = ce}
+  re   <- tExp r
+  ce   <- tExp c
+  tres <- mapM tExp res
+  return SRule {lexps = les, rexps = tres, srate = re, cond = ce}
 
 
 ruleQuoter :: String -> Q Exp
