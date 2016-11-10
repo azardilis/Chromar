@@ -21,9 +21,11 @@ library
                       Chromar.Observables
                       Chromar.RuleParser
                       Chromar.RuleQuotes
+                      Chromar.Fluent
                       Chromar.Multiset
                       Chromar
    
   other-extensions:   BangPatterns
 
   default-language:   Haskell2010
+

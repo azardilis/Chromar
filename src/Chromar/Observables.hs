@@ -4,6 +4,7 @@ import qualified System.Random as R
 import Chromar.Multiset
 import Chromar.Core
 
+
 type Obs = Double
 type ObsF a = Multiset a -> Obs
 type TObs = (Time, [Obs])

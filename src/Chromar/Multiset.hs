@@ -33,6 +33,7 @@ perms n k
 mults :: (Eq a) => Multiset a -> Multiset a -> Int
 mults m1 m2 = product [perms (occur el m2) m | (el, m) <- m1]
 
+
 diff :: (Eq a) => Multiset a -> Multiset a -> Multiset a
 diff [] ys = []
 diff ((x,n):xs) ys = sub $ find (\(y,_) -> x == y) ys
