@@ -173,7 +173,7 @@ tuplify s lhs r = TupE [lhs, VarE s, r]
 
 mkRateExp :: Name -> Exp -> Exp -> Exp
 mkRateExp s lhs r = AppE (VarE $ mkName "fullRate") args where
-  args = tuplify s lhs r
+    args = tuplify s lhs r
 
 
 mkReturnStmt :: Exp -> Stmt

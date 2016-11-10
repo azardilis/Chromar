@@ -13,7 +13,7 @@ data Rxn a = Rxn { lhs :: Multiset a,
   deriving (Eq, Show)
 
 
-           
+
 type Rule a = Multiset a -> Time -> [Rxn a]
 
 type Time = Double

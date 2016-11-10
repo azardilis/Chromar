@@ -4,6 +4,9 @@ module Chromar.Fluent
       at,
       mkFluent,
       (<>*>),
+      (<<*>),
+      (<+*>),
+      (<-*>),
       constant,
       time,
       orElse,
@@ -47,6 +50,18 @@ instance Monoid a => Monoid (Fluent a) where
 -- instances of Num, Ord etc.
 (<>*>) :: (Ord a) => Fluent a -> Fluent a -> Fluent Bool
 (<>*>) = liftA2 (>)
+
+
+(<<*>) :: (Ord a) => Fluent a -> Fluent a -> Fluent Bool
+(<<*>) = liftA2 (<)
+
+
+(<+*>) :: (Num a) => Fluent a -> Fluent a -> Fluent a
+(<+*>) = liftA2 (+)
+
+
+(<-*>) :: (Num a) => Fluent a -> Fluent a -> Fluent a
+(<-*>) = liftA2 (-)
 
 
 mkFluent :: (Time -> a) -> Fluent a
@@ -130,7 +145,7 @@ acc f ti init acc = let times = scanl1 (+) (repeat ti)
                         vals  = map (at f) times
                    in accTable (zip times vals) init acc
 
-
+                      
 accTable :: [(Time, a)] -> b -> (a -> b -> b) -> Fluent b
 accTable table init accF = Fluent { at = \t -> foldr
                                                (\(tt, v) acc -> accF v acc)
