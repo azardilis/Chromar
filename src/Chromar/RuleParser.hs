@@ -86,7 +86,7 @@ parseRule = do
   spaces
   r <- parseRate
   spaces
-  c <- parseCond
+  c <- option "True" parseCond
   return SRule{ lexps = createExps left,
                 rexps = createExps right,
                 srate  = createExp r,
