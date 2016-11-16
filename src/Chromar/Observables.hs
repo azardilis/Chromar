@@ -102,10 +102,3 @@ runTW (Model {rules=rs, initState=s}) t fn obss = do
   rgen <- R.getStdGen
   let traj = takeWhile (\s -> getT s < t) (simulate rgen rs s)
   writeObs fn obss traj
-
-
-
-
-
-
-
