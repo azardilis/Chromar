@@ -15,6 +15,7 @@ module Chromar.Fluent
       between,
       fconcat,
       flookup,
+      flookupM,
       every,
       empty,
       repeatEvery,
@@ -24,7 +25,8 @@ module Chromar.Fluent
 
 import Control.Applicative hiding (empty)
 import Data.Fixed
-
+import qualified Data.Map.Strict as Map
+import Data.Maybe
 
 type Time = Double
 
@@ -117,7 +119,8 @@ fconcat' [] _ acc  = acc
 fconcat' _ [] acc  = acc
 fconcat' (f:fs) (v:vs) acc = fconcat' fs vs (f acc v)
 
-
+-- assume ordered sequence and do binary instead of linear search
+-- we are assuming it anyway so we might as well
 ffind :: [(Time, a)] -> Time -> a
 ffind [] _ = error ""
 ffind [(t', v)] t = v
@@ -128,6 +131,13 @@ ffind ((t1, val1) : (t2, val2) : tvals) t =
 
 flookup :: [(Time, a)] -> Fluent a
 flookup tvals = Fluent { at = ffind tvals }
+
+
+flookupM
+  :: (Fractional a)
+  => Map.Map Time a -> Fluent a
+flookupM tvals =
+  Fluent {at = \t -> fromMaybe 0.0 $ fmap snd (Map.lookupLE t tvals)}
 
 
 every :: Time -> a -> (a->a) -> Fluent a
