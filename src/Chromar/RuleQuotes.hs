@@ -1,7 +1,6 @@
 module Chromar.RuleQuotes where
 
 import Language.Haskell.TH
-import Language.Haskell.Meta.Parse
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Data.Set (Set)
@@ -9,6 +8,7 @@ import qualified Data.Set as Set
 import Text.ParserCombinators.Parsec
 import Data.List
 import Chromar.RuleParser
+import Chromar.MAttrs
 
 
 type FieldProd = (FieldPat, [Exp], Set Name)
@@ -29,15 +29,15 @@ tFieldPat names freshNm (nm, VarE pnm) =
          , [UInfixE (VarE freshNm) (VarE $ mkName "==") (VarE pnm)]
          , Set.empty)
     else ((nm, VarP pnm), [], Set.fromList [pnm])
-tFieldPat name freshNm (nm, exp) =
+tFieldPat _ freshNm (nm, e) =
   ( (nm, VarP freshNm)
-  , [UInfixE (VarE freshNm) (VarE $ mkName "==") exp]
+  , [UInfixE (VarE freshNm) (VarE $ mkName "==") e]
   , Set.empty)
 
 
 --- monadic action
 qtFieldPat :: Set Name -> FieldExp -> Q FieldProd
-qtFieldPat names fexp@(nm, exp) = do
+qtFieldPat names fexp@(nm, _) = do
   fn <- newName (showName nm)
   return $ tFieldPat names fn fexp
 
@@ -78,12 +78,13 @@ tAgentPat :: Set Name -> Exp -> Q ([Stmt], Set Name)
 tAgentPat sn (RecConE nm fexps) = mkAgentStmts nm qexps where
   qfps  = mapM (qtFieldPat sn) fexps
   qexps = mkAgentExps qfps
+tAgentPat _ _ = error "expected records"
 
 
 mkLhsStmts :: Set Name -> [Stmt] -> [Exp] -> Q [Stmt]
 mkLhsStmts sn allStmts [] = return allStmts
-mkLhsStmts sn allStmts (exp:exps) = do
-  (stmts, sn') <- tAgentPat sn exp
+mkLhsStmts sn allStmts (e:exps) = do
+  (stmts, sn') <- tAgentPat sn e
   mkLhsStmts (Set.union sn sn') (allStmts ++ stmts) exps
 
 
@@ -92,15 +93,30 @@ mkLhs = mkLhsStmts Set.empty []
 
 
 isFluent :: Info -> Bool
-isFluent (VarI m t _ _) =
+isFluent (VarI _ t _ _) =
   case t of
     (AppT (ConT tnm) _) -> "Fluent" `isSuffixOf` show tnm
     _ -> False
 isFluent _ = False
 
 
+isObservable :: Info -> Bool
+isObservable (VarI _ t _ _) =
+  case t of
+    (AppT (ConT tnm) _) -> "Observable" `isSuffixOf` show tnm
+    _ -> False
+isObservable _ = False
+
+
 mkFApp :: Name -> Exp
 mkFApp nm = ParensE (AppE (AppE (VarE $ mkName "at")  (VarE nm)) (VarE $ mkName "t"))
+
+
+mkObsApp :: Name -> Exp
+mkObsApp nm = ParensE (AppE obsFExp stateExp)
+  where
+    obsFExp = AppE (VarE $ mkName "gen") (VarE nm)
+    stateExp = VarE $ mkName "s"
 
 
 tStmt :: Stmt -> Q Stmt
@@ -110,6 +126,7 @@ tStmt (BindS p e) = do
 tStmt (NoBindS e) = do
   te <- tExp e
   return $ NoBindS te
+tStmt _ = error "BindS or NoBindS statements only"
 
 
 tMExp :: Maybe Exp -> Q (Maybe Exp)
@@ -120,19 +137,29 @@ tMExp Nothing  = return Nothing
 
 
 tName :: Maybe Name -> Exp -> Q Exp
-tName (Just nm) exp = do
+tName (Just nm) e = do
   info <- reify nm
   if isFluent info
      then return $ mkFApp nm
-     else return exp     
-tName Nothing exp = return exp
+     else return e     
+tName Nothing e = return e
+
+
+tNameObs :: Maybe Name -> Exp -> Q Exp
+tNameObs (Just nm) e = do
+  info <- reify nm
+  if isObservable info
+     then return $ mkObsApp nm
+     else return e
+tNameObs Nothing e = return e
 
 
 --- there's probably a better way of doing this
 tExp :: Exp -> Q Exp
 tExp var@(VarE nm) = do
   mnm <- lookupValueName (show nm)
-  tName mnm var
+  e <- tName mnm var
+  tNameObs mnm e
 tExp (AppE e1 e2) = do
   te1 <- tExp e1
   te2 <- tExp e2
@@ -236,5 +263,6 @@ ruleQuoter :: String -> Q Exp
 ruleQuoter s = case parse parseRule "" s of
   Left err  -> error (show err)
   Right r   -> do
-    sr <- fluentTransform r
-    ruleQuoter' sr
+    sr  <- fluentTransform r
+    sr' <- fillAttrs sr
+    ruleQuoter' sr'
