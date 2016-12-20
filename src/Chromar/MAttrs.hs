@@ -1,10 +1,6 @@
 module Chromar.MAttrs where
 
 import Language.Haskell.TH 
-import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax
-import Language.Haskell.Meta.Parse
-import Data.Maybe
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Chromar.RuleParser
@@ -20,7 +16,7 @@ getN (AgentT nm _) = nm
 
 
 getIntf :: AgentType -> S.Set Nm
-getIntf (AgentT _ intf) = intf
+getIntf (AgentT _ iface) = iface
 
 
 intf :: Exp -> [FieldExp]
@@ -33,15 +29,15 @@ fst3 (x, _, _) = x
 
 
 getType :: Con -> AgentType
-getType (RecC nm intf) = AgentT (nameBase nm) (S.fromList fNames)
+getType (RecC nm ifce) = AgentT (nameBase nm) (S.fromList fNames)
   where
-    fNames = map (nameBase . fst3) intf
+    fNames = map (nameBase . fst3) ifce
 getType _ = error "Expected records"
 
   
 extractIntf :: Info -> [AgentType]
 extractIntf (TyConI (DataD _ _ _ cons _)) = map getType cons
-extractIntf _ = error "Expected records"
+extractIntf _ = error "Expected type constructor"
 
 
 createMFExp :: Nm -> Q FieldExp
@@ -57,6 +53,7 @@ fillPat typ (RecConE nm fexps) = do
   let mAttrs = S.difference fIntf pIntf
   mFExps <- mapM createMFExp (S.toList mAttrs)
   return $ RecConE nm (fexps ++ mFExps)
+fillPat _ _ = error "Expected record patterns"
 
 
 lookupType :: [AgentType] -> Nm -> AgentType
@@ -67,6 +64,8 @@ fPat :: [AgentType] -> Exp -> Q Exp
 fPat ats e@(RecConE nm _) = fillPat at e
   where
     at = lookupType ats (nameBase nm)
+fPat _ _ = error "Expected record patterns"
+
 
 
 fRExp :: Exp -> Exp -> Exp
@@ -75,6 +74,11 @@ fRExp lexp (RecConE nm rIntf) = RecConE nm (M.toList pIntf')
     fIntf = M.fromList (intf lexp)
     pIntf = M.fromList rIntf
     pIntf' = M.union pIntf (M.difference fIntf pIntf)
+fRExp _ _ = error "Expected records"
+
+
+sameType :: Exp -> Exp -> Bool
+sameType (RecConE nm _) (RecConE nm' _) = nm == nm'
 
 
 fillAttrs :: SRule -> Q SRule
@@ -86,5 +90,5 @@ fillAttrs SRule { lexps = les
   info <- reify (mkName "Agent")
   let aTyps = extractIntf info
   les' <- mapM (fPat aTyps) les
-  let res' = [fRExp l r | (l, r) <- zip les' res]
+  let res' = [fRExp ls rs | (ls, rs) <- zip les' res, sameType ls rs]
   return SRule {lexps = les', rexps = res', srate = r, cond = c}
