@@ -53,3 +53,6 @@ findAndRemove :: [a] -> (a -> Bool) -> [a] -> (Maybe a, [a])
 findAndRemove acc _ [] = (Nothing, reverse acc)
 findAndRemove acc p (x:xs) | p x = (Just x, (reverse acc) ++ xs)
                            | otherwise = findAndRemove (x:acc) p xs
+
+toList :: Multiset a -> [a]
+toList = concatMap (\(el, n) -> replicate n el)
