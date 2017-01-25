@@ -3,6 +3,7 @@
 
 module Main where
 
+import Data.List
 import qualified System.Random as R
 import Data.Random.Normal
 import Chromar
@@ -16,15 +17,28 @@ data Attrs = Attrs
 
 
 data Agent
-  = Seed { attr :: Attrs
+  = System { germTimes :: [Double]
+           , flrTimes :: [Double]
+           , ssTimes :: [Double] }
+  | Seed { tob :: Double
+        ,  attr :: Attrs
         ,  dg :: Double
-        ,  art :: Double }
-  | Plant { attr :: Attrs
+        ,  art :: Double}
+  | Plant { tob :: Double
+          , attr :: Attrs
          ,  dg :: Double
          ,  wct :: Double}
-  | FPlant { attr :: Attrs
-          ,  dg :: Double}
+  | FPlant { tob :: Double
+           , attr :: Attrs
+           , dg :: Double}
   deriving (Eq, Show)
+
+
+getInd :: Agent -> Int
+getInd Seed { attr = a } = ind a
+getInd Plant { attr = a } = ind a
+getInd FPlant { attr = a } = ind a
+
 
 isSeed (Seed{ attr=at, dg=d, art=a }) = True
 isSeed _ = False
@@ -36,15 +50,24 @@ isFPlant (FPlant { attr=at, dg=d } ) = True
 isFPlant _ = False
 
 
+isSystem (System { germTimes = g }) = True
+isSystem _ = False
+
+
+avg l  = let (t,n) = foldl' (\(b,c) a -> (a+b,c+1)) (0,0) l 
+         in (realToFrac(t)/realToFrac(n))
+
 log' :: Double -> Double
-log' t = 1.0 / (1.0 + exp (-0.1 * (t - 950.0)))
+--log' t = 1.0 / (1.0 + exp (-0.1 * (t - 950.0)))
+log' t = 1.0 / (1.0 + exp (-100.0 * (t - 1000.0)))
 
 logf' :: Double -> Double
-logf' t = 1.0 / (1.0 + exp (-0.1 * (t - 2500.0)))
+-- logf' t = 1.0 / (1.0 + exp (-0.1 * (t - 2500.0)))
+logf' t = 1.0 / (1.0 + exp (-100.0 * (t - 2604.0)))
+
 
 logs' :: Double -> Double
-logs' t = 1.0 / (1.0 + exp (-0.1 * (t - 8000.0)))
-
+logs' t = 1.0 / (1.0 + exp (-100.0 * (t - 8448.0)))
 
 
 nseeds = Observable {name = "nseeds", gen = countM . select isSeed}
@@ -53,7 +76,15 @@ nplants = Observable { name = "nplants", gen  = countM . select isPlant }
 
 nfplants = Observable { name = "nfplants", gen = countM . select isFPlant }
            
-sdev = Observable { name = "sdev", gen  = sumM dg }
+avgGermTime = Observable { name = "avgGermTime", gen =  sumM (avg . germTimes) .  select isSystem }
+avgFlrTime = Observable { name = "avgFlrTime", gen =  sumM (avg . flrTimes) .  select isSystem }
+avgSTime = Observable { name = "avgSTime", gen =  sumM (avg . ssTimes) .  select isSystem }
+
+
+dev1 = Observable { name = "dev1", gen = sumM dg . selectAttr getInd 1 }
+dev2 = Observable { name = "dev2", gen = sumM dg . selectAttr getInd 2 }
+dev3 = Observable { name = "dev3", gen = sumM dg . selectAttr getInd 3 }
+dev4 = Observable { name = "dev4", gen = sumM dg . selectAttr getInd 4 }
 
 
 mkSt :: IO (Multiset Agent)
@@ -63,33 +94,63 @@ mkSt = do
   let psis = take n $ normals' (0.0, 1.0) gen
   return $
     ms
-      [ Seed {attr = Attrs {ind = i, psi = pi}, dg = 0.0, art = 0.0}
+     ( [ Seed {tob=0.0, attr = Attrs {ind = i, psi = pi}, dg = 0.0, art = 0.0}
       | (pi, i) <- zip psis [1 .. n]
-      ]
+      ] ++ [System{germTimes=[], flrTimes=[], ssTimes=[]}] )
+
+
+mkSt' :: Multiset Agent
+mkSt' =
+  ms $
+  replicate
+    100
+    ( Seed {tob = 0.0, attr = Attrs {ind = 1, psi = 0.0}, dg = 0.0, art = 0.0} ) ++
+     [System {germTimes = [], flrTimes = [], ssTimes = []}]
+
 
 $(return [])
+
 
 dev =
   [rule| Seed{attr=atr, dg=d, art=a} -->
              Seed{attr=atr, dg = d + (htu time a (psi atr)), art=a + (arUpd moist temp)} @1.0 |]
-
+  
 trans =
-  [rule| Seed{attr=atr, dg=d, art=a} --> Plant{attr=atr, dg=0.0, wct=0.0} @log' d |]
+  [rule| Seed{tob=tb, attr=atr, dg=d, art=a}, System{germTimes=gt} -->
+             Plant{tob=time,attr=atr, dg=0.0, wct=0.0}, System{germTimes=(time-tb):gt} @log' d |]
 
 devp =
-  [rule| Plant{attr=a, dg=d, wct=w} --> Plant{attr=a, dg=d+ptu* fp (wcUpd time w), wct=wcUpd time w} @1.0 |]
+  [rule| Plant{dg=d, wct=w} --> Plant{dg=d+ptu* fp (wcUpd time w), wct=wcUpd time w} @1.0 |]
+  
+transp = [rule| Plant{tob=tb,attr=a, dg=d, wct=w}, System{flrTimes=ft} --> 
+                  FPlant{tob=time,attr=a,dg=0.0}, System{flrTimes=(time-tb):ft} @logf' d |]
 
-transp = [rule| Plant{attr=a, dg=d, wct=w} --> FPlant{attr=a,dg=0.0} @logf' d |]
+devfp = [rule| FPlant{dg=d} --> FPlant{dg=d+disp} @1.0 |]
 
-devfp = [rule| FPlant{attr=a,dg=d} --> FPlant{attr=a,dg=d+disp} @1.0 |]
+transfp = [rule| FPlant{tob=tb,attr=a,dg=d}, System{ssTimes=st} -->
+                   Seed{tob=time, attr=a, dg=0.0, art=0.0}, System{ssTimes=(time-tb):st} @logs' d |]
 
-transfp = [rule| FPlant{attr=a,dg=d} --> Seed{attr=a, dg=0.0, art=0.0} @logs' d |]
+out :: Multiset Agent -> IO ()
+out m = do
+  writeFile "outGermTimes.txt" (unlines gts)
+  writeFile "outFlTimes.txt" (unlines fts)
+  writeFile "outSTimes.txt" (unlines sts)
+  where
+    (gTimes, fTimes, sTimes) = head [(gt, ft, st) | (System{germTimes=gt, flrTimes=ft, ssTimes=st}, _) <- m]
+    gts = "germTime" : (map (show . (/ 24.0)) gTimes)
+    fts = "flowerTime" : (map (show . (/ 24.0)) fTimes)
+    sts  = "seedTime" : (map (show . (/ 24.0)) sTimes)
 
 
 main :: IO ()
 main = do
+  gen <- R.getStdGen
   s <- mkSt
-  let m =
-        Model
-        {rules = [dev, trans, devp, transp, devfp, transfp], initState = s}
-  runTW m (365 * 10 * 24) "models/seedsModel/out/outV.txt" [nseeds, nplants, nfplants]
+  let t = 365 * 10 * 24
+  let rules = [dev, trans, devp, transp, devfp, transfp]
+  let traj = takeWhile (\s -> getT s < t) (simulate gen rules s)
+  let lst = last traj
+  out (getM lst)
+      
+  
+  
