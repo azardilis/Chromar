@@ -15,7 +15,7 @@ day' = unsafePerformIO (readTable dataFile 3)
 moist = unsafePerformIO (readTable dataFile 5)
 
 fi = 0.598
---fi = 0.737
+---fi = 0.737
 fu = 0
 
 psmax = -5
