@@ -8,6 +8,7 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 library
+  ghc-options: -ddump-splices
   build-depends:      base >=4.8 && <4.9,
                       random >=1.1 && <1.2,
                       parsec >=3.1 && <3.2,
@@ -47,6 +48,7 @@ executable seeds
 
 executable market
 
+ ghc-options:       -ddump-splices
  hs-source-dirs: models/market
  main-is:        Market.hs
  build-depends:  base >=4.8 && <4.9,
@@ -55,3 +57,17 @@ executable market
                  Chart-diagrams,
                  coloured-petri-nets,
                  normaldistribution >= 1.1
+		 
+executable seedsD
+
+ hs-source-dirs:    models/seedsModel
+ main-is:           Utils.hs
+ other-modules:     Env
+ build-depends:     base >=4.8 && <4.9,
+                    random >=1.1 && <1.2,
+                    text >= 1.2,
+                    Chart,
+                    Chart-diagrams,
+                    containers >=0.5,
+                    coloured-petri-nets,
+                    normaldistribution >= 1.1
