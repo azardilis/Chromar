@@ -67,7 +67,6 @@ fPat ats e@(RecConE nm _) = fillPat at e
 fPat _ _ = error "Expected record patterns"
 
 
-
 fRExp :: Exp -> Exp -> Exp
 fRExp lexp (RecConE nm rIntf) = RecConE nm (M.toList pIntf')
   where
@@ -79,6 +78,18 @@ fRExp _ _ = error "Expected records"
 
 sameType :: Exp -> Exp -> Bool
 sameType (RecConE nm _) (RecConE nm' _) = nm == nm'
+sameType _ _ = error "Expected records"
+
+
+tRExp l r
+  | sameType l r  = fRExp l r
+  | otherwise     = r
+
+
+lZipWith :: (a->b->b) -> [a] -> [b] -> [b]
+lZipWith _ ls [] = []
+lZipWith _ [] rs = rs
+lZipWith f (l:ls) (r:rs) = f l r : lZipWith f ls rs 
 
 
 fillAttrs :: SRule -> Q SRule
@@ -90,5 +101,6 @@ fillAttrs SRule { lexps = les
   info <- reify (mkName "Agent")
   let aTyps = extractIntf info
   les' <- mapM (fPat aTyps) les
-  let res' = [fRExp ls rs | (ls, rs) <- zip les' res, sameType ls rs]
+--  let res' = [fRExp ls rs | (ls, rs) <- zip les' res, sameType ls rs]
+  let res' = lZipWith tRExp les' res
   return SRule {lexps = les', rexps = res', srate = r, cond = c}
