@@ -1,5 +1,6 @@
 module Chromar.Observables where
 
+import Numeric
 import qualified System.Random as R
 import Chromar.Multiset
 import Chromar.Core
@@ -46,6 +47,9 @@ applyObs :: [State a] -> [ObsF a] -> [TObs]
 applyObs ss fs = [(t, map ($ s) fs) | (State s t _) <- ss]
 
 
+formatFloatN numOfDecimals floatNum = showFFloat (Just numOfDecimals) floatNum ""
+
+
 printObs :: (Show a) => [State a] -> [Observable a] -> IO ()
 printObs ss fs = do
   putStrLn header
@@ -64,8 +68,8 @@ showObs = mapM_  show'
 
 
 showTObs :: TObs -> String
-showTObs (t, obss) = show t ++ " " ++ obssS where
-  obssS = unwords (map show obss)
+showTObs (t, obss) = formatFloatN 2 t ++ " " ++ obssS where
+  obssS = unwords (map (formatFloatN 2) obss)
 
 
 writeObs :: (Show a) => FilePath -> [Observable a] -> [State a] -> IO ()
