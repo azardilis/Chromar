@@ -29,15 +29,15 @@ tFieldPat names freshNm (nm, VarE pnm) =
          , [UInfixE (VarE freshNm) (VarE $ mkName "==") (VarE pnm)]
          , Set.empty)
     else ((nm, VarP pnm), [], Set.fromList [pnm])
-tFieldPat _ freshNm (nm, e) =
+tFieldPat name freshNm (nm, exp) =
   ( (nm, VarP freshNm)
-  , [UInfixE (VarE freshNm) (VarE $ mkName "==") e]
+  , [UInfixE (VarE freshNm) (VarE $ mkName "==") exp]
   , Set.empty)
 
 
 --- monadic action
 qtFieldPat :: Set Name -> FieldExp -> Q FieldProd
-qtFieldPat names fexp@(nm, _) = do
+qtFieldPat names fexp@(nm, exp) = do
   fn <- newName (showName nm)
   return $ tFieldPat names fn fexp
 
@@ -83,8 +83,8 @@ tAgentPat _ _ = error "expected records"
 
 mkLhsStmts :: Set Name -> [Stmt] -> [Exp] -> Q [Stmt]
 mkLhsStmts sn allStmts [] = return allStmts
-mkLhsStmts sn allStmts (e:exps) = do
-  (stmts, sn') <- tAgentPat sn e
+mkLhsStmts sn allStmts (exp:exps) = do
+  (stmts, sn') <- tAgentPat sn exp
   mkLhsStmts (Set.union sn sn') (allStmts ++ stmts) exps
 
 
@@ -93,7 +93,7 @@ mkLhs = mkLhsStmts Set.empty []
 
 
 isFluent :: Info -> Bool
-isFluent (VarI _ t _ _) =
+isFluent (VarI m t _ _) =
   case t of
     (AppT (ConT tnm) _) -> "Fluent" `isSuffixOf` show tnm
     _ -> False
@@ -126,7 +126,6 @@ tStmt (BindS p e) = do
 tStmt (NoBindS e) = do
   te <- tExp e
   return $ NoBindS te
-tStmt _ = error "BindS or NoBindS statements only"
 
 
 tMExp :: Maybe Exp -> Q (Maybe Exp)
@@ -137,12 +136,12 @@ tMExp Nothing  = return Nothing
 
 
 tName :: Maybe Name -> Exp -> Q Exp
-tName (Just nm) e = do
+tName (Just nm) exp = do
   info <- reify nm
   if isFluent info
      then return $ mkFApp nm
-     else return e     
-tName Nothing e = return e
+     else return exp     
+tName Nothing exp = return exp
 
 
 tNameObs :: Maybe Name -> Exp -> Q Exp
@@ -223,7 +222,7 @@ mkRxnExp s r = RecConE (mkName "Rxn") fields where
   rateSym = mkName "rate"
   lexps'  = AppE (VarE $ mkName "ms") (ListE $ lexps r)
   rexps'  = AppE (VarE $ mkName "ms") (ListE $ rexps r)
-  rateExp = mkRateExp s lexps' (srate r) 
+  rateExp = srate r -- mkRateExp s lexps' (srate r) 
   fields  = [ (lhsSym , lexps'),
               (rhsSym , rexps'),
               (rateSym, rateExp)
