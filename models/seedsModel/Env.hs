@@ -7,15 +7,16 @@ import qualified Data.Text.IO as TI
 import qualified Data.Map.Strict as Map
 
 
-dataFile = "models/seedsModel/data/weatherNorwich10yrs.csv"
+dataFile = "data/weatherValencia10yrs.csv"
 
 temp' = unsafePerformIO (readTable dataFile 4)
 photo' = unsafePerformIO (readTable dataFile 2)
 day' = unsafePerformIO (readTable dataFile 3)
 moist = unsafePerformIO (readTable dataFile 5)
 
+
 fi = 0.598
----fi = 0.737
+--fi = 0.737
 fu = 0
 
 psmax = -5
