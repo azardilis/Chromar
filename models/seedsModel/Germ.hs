@@ -1,3 +1,4 @@
+{-# LANGUAGE TransformListComp #-}
 {-# LANGUAGE  QuasiQuotes #-}
 {-# LANGUAGE  TemplateHaskell #-}
 
@@ -5,33 +6,34 @@ module Main where
 
 import Data.List
 import qualified System.Random as R
+import GHC.Exts (groupWith, the)
 import Data.Random.Normal
 import Chromar
 import Env
 
-
 data Attrs = Attrs
-  { ind :: Int
-  , psi :: Double
+  { ind :: !Int
+  , psi :: !Double
   } deriving (Eq, Show)
 
 
 data Agent
-  = System { germTimes :: [Double]
-           , flrTimes :: [Double]
-           , ssTimes :: [Double] }
-  | Seed { tob :: Double
-        ,  attr :: Attrs
-        ,  dg :: Double
-        ,  art :: Double}
-  | Plant { tob :: Double
-          , attr :: Attrs
-         ,  dg :: Double
-         ,  wct :: Double}
-  | FPlant { tob :: Double
-           , attr :: Attrs
-           , dg :: Double}
+  = System { germTimes :: ![Double]
+           , flrTimes :: ![Double]
+           , ssTimes :: ![Double]}
+  | Seed { tob :: !Double
+         , attr :: !Attrs
+         , dg :: !Double
+         , art :: !Double}
+  | Plant { tob :: !Double
+          , attr :: !Attrs
+          , dg :: !Double
+          , wct :: !Double}
+  | FPlant { tob :: !Double
+           , attr :: !Attrs
+           , dg :: !Double}
   deriving (Eq, Show)
+
 
 
 getInd :: Agent -> Int
@@ -76,9 +78,24 @@ nplants = Observable { name = "nplants", gen  = countM . select isPlant }
 
 nfplants = Observable { name = "nfplants", gen = countM . select isFPlant }
            
-avgGermTime = Observable { name = "avgGermTime", gen =  sumM (avg . germTimes) .  select isSystem }
-avgFlrTime = Observable { name = "avgFlrTime", gen =  sumM (avg . flrTimes) .  select isSystem }
-avgSTime = Observable { name = "avgSTime", gen =  sumM (avg . ssTimes) .  select isSystem }
+avgGermTime =
+  Observable
+  { name = "avgGermTime"
+  , gen = sumM (avg . germTimes) . select isSystem
+  }
+
+avgFlrTime =
+  Observable
+  { name = "avgFlrTime"
+  , gen = sumM (avg . flrTimes) . select isSystem
+  }
+
+avgSTime =
+  Observable
+  { name = "avgSTime"
+  , gen = sumM (avg . ssTimes) . select isSystem
+  }
+
 
 
 dev1 = Observable { name = "dev1", gen = sumM dg . selectAttr getInd 1 }
@@ -108,6 +125,17 @@ mkSt' =
      [System {germTimes = [], flrTimes = [], ssTimes = []}]
 
 
+mkSt'' :: [Double] -> (Multiset Agent, [Double])
+mkSt'' psis =
+  ( ms ([ Seed {attr = Attrs {ind = i, psi = pi}, tob=0.0, dg = 0.0, art = 0.0}
+    | (pi, i) <- zip pss [1 .. n]
+    ] ++ [System{germTimes=[], flrTimes=[], ssTimes=[]}] )
+  , drop n psis)
+  where
+    n = 100
+    pss = take n psis
+
+
 $(return [])
 
 
@@ -122,7 +150,8 @@ trans =
 devp =
   [rule| Plant{dg=d, wct=w} --> Plant{dg=d+ptu* fp (wcUpd time w), wct=wcUpd time w} @1.0 |]
   
-transp = [rule| Plant{tob=tb,attr=a, dg=d, wct=w}, System{flrTimes=ft} --> 
+transp =
+  [rule| Plant{tob=tb,attr=a, dg=d, wct=w}, System{flrTimes=ft} -->
                   FPlant{tob=time,attr=a,dg=0.0}, System{flrTimes=(time-tb):ft} @logf' d |]
 
 devfp = [rule| FPlant{dg=d} --> FPlant{dg=d+disp} @1.0 |]
@@ -130,27 +159,57 @@ devfp = [rule| FPlant{dg=d} --> FPlant{dg=d+disp} @1.0 |]
 transfp = [rule| FPlant{tob=tb,attr=a,dg=d}, System{ssTimes=st} -->
                    Seed{tob=time, attr=a, dg=0.0, art=0.0}, System{ssTimes=(time-tb):st} @logs' d |]
 
-out :: Multiset Agent -> IO ()
-out m = do
-  writeFile "outGermTimes.txt" (unlines gts)
-  writeFile "outFlTimes.txt" (unlines fts)
-  writeFile "outSTimes.txt" (unlines sts)
-  where
-    (gTimes, fTimes, sTimes) = head [(gt, ft, st) | (System{germTimes=gt, flrTimes=ft, ssTimes=st}, _) <- m]
-    gts = "germTime" : (map (show . (/ 24.0)) gTimes)
-    fts = "flowerTime" : (map (show . (/ 24.0)) fTimes)
-    sts  = "seedTime" : (map (show . (/ 24.0)) sTimes)
+fname i = "models/seedsModel/out/outS/outS" ++ (show i) ++ ".txt"
 
+doSimulation :: [Double] -> Int -> IO ([Double])
+doSimulation psis i = do
+  print i
+  let (s, psis') = mkSt'' psis
+  let t = (365*24*2)
+  let m =
+         Model
+         {rules = [dev, trans, devp, transp, devfp, transfp], initState = s}
+  runTW' m t (fname i) nseeds
+  return psis'
+
+go :: [Double] -> Int -> IO ()
+go psis 0 = return ()
+go psis n = do
+   psis' <- doSimulation psis n
+   go psis' (n-1)
 
 main :: IO ()
 main = do
   gen <- R.getStdGen
-  s <- mkSt
-  let t = 365 * 10 * 24
-  let rules = [dev, trans, devp, transp, devfp, transfp]
-  let traj = takeWhile (\s -> getT s < t) (simulate gen rules s)
-  let lst = last traj
-  out (getM lst)
-      
-  
-  
+  let psis = normals' (0.0, 1.0) gen
+  go psis 50
+
+
+
+-----------------------
+showRow (t, val) = show t ++ " " ++ show val
+
+writeTraj fn traj = writeFile fn (unlines rows)
+  where
+    header = "time" ++ " " ++ "val"
+    rows = header : (map showRow traj)
+
+calcDay = floor . (/24)
+
+everyN n xs =
+  case drop (n - 1) xs of
+    [] -> []
+    (y:ys) -> y : everyN n ys
+
+              
+runTW'
+  :: (Eq a, Show a)
+  => Model a -> Time -> FilePath -> Observable a -> IO ()
+runTW' (Model {rules = rs
+              ,initState = s}) tEnd fn obs = do
+  rgen <- R.getStdGen
+  let traj = everyN 100 (takeWhile (\s -> getT s < tEnd) $ simulate rgen rs s)
+  let ttraj = [ (t, gen obs $ m) | State m t n <- traj]
+  writeTraj fn ttraj
+
+
