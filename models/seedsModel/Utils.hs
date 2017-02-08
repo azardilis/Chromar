@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Monad
 import qualified System.Random as R
 import Data.Random.Normal
 import Chromar.Fluent
@@ -21,6 +22,10 @@ data Agent
   | FPlant { attr :: Attrs
           ,  dg :: Double}
   deriving (Eq, Show)
+
+
+showPsi :: Agent -> IO ()
+showPsi (Seed { attr=a, dg=_, art=_ }) = print (psi a)
 
 
 data DState = DState { dtime :: Double,
@@ -58,15 +63,15 @@ summary ds = (t, Summary nseeds nplants nfplants)
     nplants = length $ filter isPlant m
     nfplants = length $ filter isFPlant m
 
-mkSt :: IO [Agent]
-mkSt = do
-  let n = 1000
-  gen <- R.getStdGen
-  let psis = take n $ normals' (0.0, 1.0) gen
-  return $
-     ( [ Seed {attr = Attrs {ind = i, psi = pi}, dg = 0.0, art = 0.0}
-      | (pi, i) <- zip psis [1 .. n]
-      ] )
+mkSt :: [Double] -> ([Agent], [Double])
+mkSt psis =
+  ( [ Seed {attr = Attrs {ind = i, psi = pi}, dg = 0.0, art = 0.0}
+    | (pi, i) <- zip pss [1 .. n]
+    ]
+  , drop n psis)
+  where
+    n = 1000
+    pss = take n psis
      
 mkSt' :: [Agent]
 mkSt' = ( replicate 3 (Seed{attr = Attrs {ind=0, psi=(-0.5)}, dg=0.0, art=0.0}) ++
@@ -134,11 +139,31 @@ outD dss = mapM_ print summs
   where
     summs = map summD dss
 
+fname i = "out/outDW/outD" ++ (show i) ++ ".txt"
+
+doSimulation :: [Double] -> Int -> IO ([Double])
+doSimulation psis i = do
+    print i
+    let (s, psis') = mkSt psis
+    let nsteps = (365 * 24 * 2)
+    let initS =
+            DState
+            { dtime = 0
+            , mixt = s
+            }
+    let traj = take nsteps $ iterate stepF initS
+    outF (fname i) traj
+    return psis'
+
+
+go :: [Double] -> Int -> IO ()
+go psis 0 = return ()
+go psis n = do
+  psis' <- doSimulation psis n
+  go psis' (n-1)
+
 main :: IO ()
 main = do
-  s <- mkSt
-  let nsteps = (365*24*10)
-  let initS = DState { dtime = 0, mixt=s }
-  let traj = take nsteps $ iterate stepF initS
-  outF "outD.txt" traj
-
+  gen <- R.getStdGen
+  let psis = normals' (0.0, 6.0) gen
+  go psis 1
