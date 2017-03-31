@@ -1,116 +1,104 @@
 {-# LANGUAGE  QuasiQuotes #-}
+{-# LANGUAGE  TemplateHaskell #-}
+
+module Main where
 
 import Chromar
 
 --- Agents
-data Token = C { pos    :: (Int, Int),
-                 x      :: Double }
-           | T { ncells :: Int } deriving (Eq, Show)
+data Agent = C
+    { cid :: Int
+    , nextTo :: Int
+    , x :: Double
+    } deriving (Eq, Show)
 
+idx :: Agent -> Int
+idx (C{cid=i, nextTo=_, x=_}) = i
 
-
---- Other definitions
-idx :: Token -> Int
-idx (C{pos=(i, _), x=_}) = i
-idx _ = undefined
-
-
-isT :: Token -> Bool
-isT (T{ncells=_}) = True
-isT _             = False
-
-
-isC :: Token -> Bool
-isC (C{pos=_, x=_}) = True
-isC _               = False
-
+isC :: Agent -> Bool
+isC _     = True
 
 f = fromIntegral . floor
 c = fromIntegral . ceiling
 
-
-nextTo :: (Int, Int) -> (Int, Int) -> Bool
-nextTo (pos, n) (pos', n') = (pos == n') || (n == pos')
-
-mov :: (Int, Int) -> Int -> (Int, Int)
-mov (pos, _) n = (pos, n+1)
-
-np :: (Int, Int) -> Int -> (Int, Int)
-np (_, nb) n = (n+1, nb)
-
-gr :: Int -> Double
-gr n = 10.0 / (fromIntegral n)
-
-
---- Rules
-df = [rule|
-       C{pos=p, x=x}, C{pos=p', x=x'} -->
-       C{pos=p, x=x-1}, C{pos=p', x=x'+1} @x [(nextTo p p') && (x>0)]
-     |]
-
-
-growth = [rule|
-           T{ncells=n}, C{pos=p, x=x} -->
-           T{ncells=n+1}, C{pos=mov p n, x=f (x/2.0)}, C{pos=np p n, x=c (x/2.0)} @(gr n) [True]
-         |]
-
-
---- Initial state
-s0 = ms [ T{ncells=10 },
-          C{pos=(1, 2), x=50.0},
-          C{pos=(2, 3), x=0.0 },
-          C{pos=(3, 4), x=0.0 },
-          C{pos=(4, 5), x=0.0 },
-          C{pos=(5, 6), x=0.0 },
-          C{pos=(6, 7), x=0.0 },
-          C{pos=(7, 8), x=0.0 },
-          C{pos=(8, 9), x=0.0 },
-          C{pos=(9, 10),x=0.0 },
-          C{pos=(10, 0),x=0.0 } ]
-
-
-model :: Model Token
-model = Model { rules     = [growth, df],
-                initState = s0 }
-
-        
---- Observables
-cv :: Multiset Token -> Obs
-cv m = sd obss where
-  obss = map (\(el, _) -> x el) m
-
+cv :: Multiset Agent -> Obs
+cv m = sd obss
+  where
+    obss = map (\(el, _) -> x el) m
 
 sd :: [Double] -> Obs
 sd m = sqrt ((sum [(obs - mean)^^2 | obs <- m]) / n) where
   n       = fromIntegral $ length m
-  mean    = (sum m) / n
+  mean = (sum m) / n
 
+g :: Double -> Double
+g s = gmax * (s / (ks + s))
+  where
+    gmax = 0.25
+    ks = 2.5
 
-mean :: [Double] -> Double
-mean xs = (sum xs)  / (fromIntegral $ length xs)
+s = repeatEvery 10.0 (between 0.0 5.0 (constant smax) (constant 0.0))
+  where
+    smax = 10.0
 
+nc =
+    Observable
+    { name = "ncells"
+    , gen = aggregate ((+) . const 1.0) 0.0 . select isC
+    }
+    
+conc1 =
+    Observable
+    { name = "conc1"
+    , gen = aggregate ((+) . x) 0.0 . select (\at -> idx at == 1)
+    }
+    
+total =
+    Observable
+    { name = "total"
+    , gen = aggregate ((+) . x) 0.0 . select isC
+    }
 
-nCells = Observable { name = "nCells",
-                      gen  = sumM (fromIntegral . ncells) . select isT }
+var =
+    Observable
+    { name = "var"
+    , gen = cv . select isC
+    }
 
-var = Observable { name = "var",
-                   gen  = cv . select isC }
+$(return [])
 
-conc1 = Observable { name = "conc1",
-                     gen  = sumM x . selectAttr idx 1  . select isC }
+--- Rules
+df = [rule|
+       C{nextTo=p, x=x}, C{cid=p, x=x'}  -->
+       C{nextTo=p, x=x-1}, C{cid=p, x=x'+1}  @x [x>0]
+     |]
 
-conc2 = Observable { name = "conc2",
-                     gen  = sumM x . selectAttr idx 2 . select isC }
+df' = [rule|
+       C{cid=p, x=x'}, C{nextTo=p, x=x}   -->
+       C{cid=p, x=x'-1}, C{nextTo=p, x=x+1} @x' [x'>0]
+     |]
 
-conc3 = Observable { name = "conc3",
-                     gen  = sumM x . selectAttr idx 3 . select isC }
+growth =
+    [rule|
+           C{nextTo=p, x=x} -->
+           C{nextTo=round nc+1, x=f (x/2.0)}, C{cid=round nc+1, nextTo=p, x=c (x/2.0)} @(g s)
+         |]
 
-totalConc = Observable { name = "total",
-                         gen  = sumM x . select isC }
+--- Initial state
+s0 = ms [ C{cid=1, nextTo=2, x=50.0},
+          C{cid=2, nextTo=3, x=0.0},
+          C{cid=3, nextTo=4, x=0.0},
+          C{cid=4, nextTo=5, x=0.0},
+          C{cid=5, nextTo=6, x=0.0},
+          C{cid=6, nextTo=7, x=0.0},
+          C{cid=7, nextTo=8, x=0.0},
+          C{cid=8, nextTo=9, x=0.0},
+          C{cid=9, nextTo=10, x=0.0},
+          C{cid=10, nextTo=0, x=0.0} ]
 
+model :: Model Agent
+model = Model { rules     = [df, df', growth],
+                initState = s0 }
 
 main :: IO ()
-main = run model nsteps observables where
-  nsteps = 1000
-  observables  = [nCells, conc1, var]
-
+main = runTW model 20.0 "out/out.txt" [nc, var, conc1]
