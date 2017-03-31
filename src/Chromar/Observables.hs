@@ -25,8 +25,8 @@ gens = map gen
 select :: (a -> Bool) -> Multiset a -> Multiset a
 select f = filter (\(el, _) -> f el)
 
-aggregate :: (a -> Int -> Obs -> Obs) -> Obs -> Multiset a -> Obs
-aggregate f = foldr (\(el, n) s -> f el n s)
+aggregate :: (a -> Obs -> Obs) -> Obs -> Multiset a -> Obs
+aggregate f i s = foldr f i (toList s)
 
 sumM :: (a -> Obs) -> Multiset a -> Obs
 sumM f m = sum (map (\(el, n) -> f el * fromIntegral n) m)
