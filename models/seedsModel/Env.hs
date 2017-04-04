@@ -6,14 +6,13 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TI
 import qualified Data.Map.Strict as Map
 
-
+---dataFile = "models/seedsModel/data/weatherValencia10yrs.csv"
 dataFile = "data/weatherValencia10yrs.csv"
 
 temp' = unsafePerformIO (readTable dataFile 4)
 photo' = unsafePerformIO (readTable dataFile 2)
 day' = unsafePerformIO (readTable dataFile 3)
 moist = unsafePerformIO (readTable dataFile 5)
-
 
 fi = 0.598
 --fi = 0.737
@@ -30,10 +29,8 @@ tbd = 3.0
 kt = 0.12
 to = 22
 
-
 tempBase = constant 3.0
 day  = day' <>*> constant 0.0
-
 
 idev = (*)
        <$> constant 0.374
@@ -55,20 +52,17 @@ pperiod =
 
 ptu = (*) <$> thermal <*> pperiod
 
-
 tmin = -3.5
 tmax = 6.0
 wcsat = 960.0
 
 favTemp temp = temp >= tmin && temp <= tmax
 
-
 wcAcc wc t = wc + exp k * ((t-tmin)**o) * ((tmax-t)**ksi)
   where
     k   = -5.1748
     o   = 2.2256
     ksi = 0.99590
-
 
 wcUpd t wc =
   if favTemp ctemp
@@ -77,7 +71,6 @@ wcUpd t wc =
   where
     ctemp = at temp t
     wc' = min (wcAcc wc ctemp) wcsat
-
 
 fp wc =
   if wc < wcsat
@@ -88,13 +81,11 @@ fp wc =
     fp1 = 1 - fi + (fi - fu) * wcRat
     fp2 = 1 - fu
 
-
 arUpd moist temp
   | moist <= psmax && moist >= psu = temp - tbar
   | moist < psu && moist > psl = ((psl - moist) / (psl - psu)) * (temp - tbar)
   | moist <= psmax || moist <= psl = 0.0
   | otherwise = 0.0
-
 
 psB ar psi =
   if psb' > psmin
@@ -104,7 +95,6 @@ psB ar psi =
     arlab = arUpd (-200) 20
     dsat = 40
     psb' = psi - psSc * (ar / (arlab * dsat * 24) )
-
 
 htuSub ar psi moist temp = (moist - psB ar psi) * (temp - tbg)
 
@@ -126,12 +116,10 @@ htu t a psi
     psb = psB ar psi
     mpsB = psB ar psi + kt * (tempt-to)
 
-
 disp = when (ntemp <>*> constant 0.0) ntemp `orElse` (constant 0.0) where
   ntemp = temp <-*> constant tbd
-  
-------
 
+--------------
 parseLine :: Int -> T.Text -> (Double, Double)
 parseLine n ln = (read $ T.unpack time, read $ T.unpack temp) where
   elems = T.splitOn (T.pack ",") ln
