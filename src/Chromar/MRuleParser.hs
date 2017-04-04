@@ -55,7 +55,7 @@ lagent = do
 ragent :: Parser (String, String)
 ragent = do
   mult <- option "1" (many1 (noneOf ['*']))
-  op "*"
+  option () (op "*")
   agentNm <- name
   attrs <- braces (commaSep attr)
   return (mult, agentNm ++ "{" ++ (intercalate "," attrs) ++ "}")
