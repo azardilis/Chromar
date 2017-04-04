@@ -30,3 +30,18 @@ library
   other-extensions:   BangPatterns
 
   default-language:   Haskell2010
+
+
+executable seeds
+
+ hs-source-dirs:    models/seedsModel
+ main-is:           GermS.hs
+ other-modules:     Env
+ build-depends:     base >=4.8 && <4.9,
+                    random >=1.1 && <1.2,
+                    text >= 1.2,
+                    Chart,
+                    Chart-diagrams,
+                    containers >=0.5,
+                    coloured-petri-nets,
+                    normaldistribution >= 1.1
