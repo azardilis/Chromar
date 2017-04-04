@@ -48,6 +48,9 @@ fullRate
     => (Multiset a, Multiset a, Double) -> Double
 fullRate (m1, m2, br) = fromIntegral (mults m1 m2) * br
 
+nrepl :: ([Int], [a]) -> [a]
+nrepl (mults, elems) = concat [replicate m e | (m, e) <- zip mults elems]
+
 apply
     :: (Eq a)
     => Rxn a -> Multiset a -> Multiset a
