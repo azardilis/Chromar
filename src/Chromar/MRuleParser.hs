@@ -20,7 +20,7 @@ data SRule = SRule
     
 langDef =
     emptyDef
-    { Tok.reservedOpNames = ["-->", "@", "=", "*"]
+    { Tok.reservedOpNames = ["-->", "@", "="]
     , Tok.reservedNames = ["where"]
     }
 
@@ -52,13 +52,15 @@ lagent = do
   attrs <- braces (commaSep attr)
   return (agentNm ++ "{" ++ (intercalate "," attrs) ++ "}")
 
+mult :: Parser String
+mult = braces (many1 (noneOf ['}']))
+
 ragent :: Parser (String, String)
 ragent = do
-  mult <- option "1" (many1 (noneOf ['*']))
-  option () (op "*")
+  m <- option "1" mult
   agentNm <- name
   attrs <- braces (commaSep attr)
-  return (mult, agentNm ++ "{" ++ (intercalate "," attrs) ++ "}")
+  return (m, agentNm ++ "{" ++ (intercalate "," attrs) ++ "}")
 
 lhsParser :: Parser [String]
 lhsParser = commaSep lagent
@@ -98,5 +100,10 @@ parseRule = do
         }
 
 --- for testing
-contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> m1 * A{x=f x} @1.0 [x + 1 + 5   ] "
+contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> {2} A{x=f x} @1.0 [x + 1 + 5] "
+
+go = case parse parseRule "rule" contents of
+  (Left err) -> (show err)
+  (Right val) -> show val
+  
   
