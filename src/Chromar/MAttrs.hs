@@ -3,7 +3,7 @@ module Chromar.MAttrs where
 import Language.Haskell.TH
 import qualified Data.Set as S
 import qualified Data.Map as M
-import Chromar.RuleParser
+import Chromar.MRuleParser
 
 type Nm = String
 
@@ -82,6 +82,7 @@ lZipWith f (l:ls) (r:rs) = f l r : lZipWith f ls rs
 fillAttrs :: SRule -> Q SRule
 fillAttrs SRule {lexps = les
                 ,rexps = res
+                ,mults = m         
                 ,srate = r
                 ,cond = c} = do
     info <- reify (mkName "Agent")
@@ -92,6 +93,7 @@ fillAttrs SRule {lexps = les
         SRule
         { lexps = les'
         , rexps = res'
+        , mults = m          
         , srate = r
         , cond = c
         }
