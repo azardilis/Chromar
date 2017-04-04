@@ -192,8 +192,8 @@ tuplify s lhs r = TupE [lhs, VarE s, r]
 tuplify2 :: Exp -> Exp -> Exp
 tuplify2 m ar = TupE [m, ar]
 
-mkRateExp :: Name -> Exp -> Exp -> Exp
-mkRateExp s lhs r = AppE (VarE $ mkName "fullRate") args
+mkActExp :: Name -> Exp -> Exp -> Exp
+mkActExp s lhs r = AppE (VarE $ mkName "fullRate") args
   where
     args = tuplify s lhs r
 
@@ -206,11 +206,13 @@ mkRxnExp s r = RecConE (mkName "Rxn") fields
     lhsSym = mkName "lhs"
     rhsSym = mkName "rhs"
     rateSym = mkName "rate"
+    actSym = mkName "act"
     mrexps = AppE (VarE $ mkName "nrepl") (tuplify2 (ListE $ mults r) (ListE $ rexps r))
     lexps' = AppE (VarE $ mkName "ms") (ListE $ lexps r)
     rexps' = AppE (VarE $ mkName "ms") (ParensE mrexps)
-    rateExp = mkRateExp s lexps' (srate r)
-    fields = [(lhsSym, lexps'), (rhsSym, rexps'), (rateSym, rateExp)]
+    rateExp = srate r
+    actExp = mkActExp s lexps' (srate r)
+    fields = [(lhsSym, lexps'), (rhsSym, rexps'), (rateSym, rateExp), (actSym, actExp)]
 
 mkCompStmts :: Name -> SRule -> Q [Stmt]
 mkCompStmts s r = do
