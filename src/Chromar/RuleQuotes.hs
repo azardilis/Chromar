@@ -7,7 +7,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Text.ParserCombinators.Parsec
 import Data.List
-import Chromar.RuleParser
+import Chromar.MRuleParser
 import Chromar.MAttrs
 
 type FieldProd = (FieldPat, [Exp], Set Name)
@@ -189,6 +189,9 @@ tFExp (nm, exp) = do
 tuplify :: Name -> Exp -> Exp -> Exp
 tuplify s lhs r = TupE [lhs, VarE s, r]
 
+tuplify2 :: Exp -> Exp -> Exp
+tuplify2 m ar = TupE [m, ar]
+
 mkRateExp :: Name -> Exp -> Exp -> Exp
 mkRateExp s lhs r = AppE (VarE $ mkName "fullRate") args
   where
@@ -203,8 +206,9 @@ mkRxnExp s r = RecConE (mkName "Rxn") fields
     lhsSym = mkName "lhs"
     rhsSym = mkName "rhs"
     rateSym = mkName "rate"
+    mrexps = AppE (VarE $ mkName "nrepl") (tuplify2 (ListE $ mults r) (ListE $ rexps r))
     lexps' = AppE (VarE $ mkName "ms") (ListE $ lexps r)
-    rexps' = AppE (VarE $ mkName "ms") (ListE $ rexps r)
+    rexps' = AppE (VarE $ mkName "ms") (ParensE mrexps)
     rateExp = mkRateExp s lexps' (srate r)
     fields = [(lhsSym, lexps'), (rhsSym, rexps'), (rateSym, rateExp)]
 
@@ -226,6 +230,7 @@ ruleQuoter' r = do
 fluentTransform :: SRule -> Q SRule
 fluentTransform SRule {lexps = les
                       ,rexps = res
+                      ,mults = m         
                       ,srate = r
                       ,cond = c} = do
     re <- tExp r
@@ -235,6 +240,7 @@ fluentTransform SRule {lexps = les
         SRule
         { lexps = les
         , rexps = tres
+        , mults = m          
         , srate = re
         , cond = ce
         }
