@@ -12,7 +12,10 @@ import Env
 data Attrs = Attrs
   { ind :: !Int
   , psi :: !Double
-  } deriving (Eq, Show)
+  } deriving (Ord, Show)
+
+instance Eq Attrs where
+  (==) a a' = (ind a == ind a') && (psi a == psi a')
 
 data Agent = 
   Seed { tob :: !Double
@@ -26,7 +29,10 @@ data Agent =
   | FPlant { tob :: !Double
            , attr :: !Attrs
            , dg :: !Double}
-  deriving (Eq, Show)
+  deriving (Ord, Show)
+
+instance Eq Agent where
+  (==) a a' = (attr a == attr a')
 
 getInd :: Agent -> Int
 getInd Seed { attr = a } = ind a
@@ -97,13 +103,24 @@ devfp = [rule| FPlant{dg=d} --> FPlant{dg=d+disp} @1.0 |]
 
 transfp =
     [rule| FPlant{tob=tb,attr=a,dg=d} -->
-                   Seed{tob=time, attr=a, dg=0.0, art=0.0} @logs' d |]
+                  Seed{tob=time, attr=a, dg=0.0, art=0.0} @logs' d |]
 
-fname = "out/outm.txt"
+fname = "models/seedsModel/out/outm.txt"
+
+showState :: SimState Agent -> String
+showState sst = show (t sst) ++ " " ++ (show nseeds)
+  where
+    mix = s sst
+    nseeds = sum [1 |(Seed{}, _) <- mix]
+
+writeTraj :: FilePath -> [SimState Agent] -> IO ()
+writeTraj fn ssts = writeFile fn (unlines $ map showState ssts)
 
 main = do
   si <- mkSt
-  let m = Model { rules = [dev, trans, devp, transp, devfp, transfp],
-                  initState = si }
-  let t = (65*1*24)
+  let g = R.mkStdGen 10
+  let rules = [dev, trans, devp, transp, devfp, transfp]
+  let m = Model {rules=rules, initState=si}
+  let t = (365*1*24)
   runTW m t fname [nseeds]
+--  writeTraj fname (take 100000 $ simulate g rules si)

@@ -17,12 +17,13 @@ library
 		 
   hs-source-dirs:     src
 
-  exposed-modules:    Chromar.Core
-                      Chromar.Observables
+  exposed-modules:    Chromar.Sim
+                      Chromar.Core
                       Chromar.MRuleParser
                       Chromar.RuleParser
                       Chromar.RuleQuotes
                       Chromar.Fluent
+                      Chromar.Observables
                       Chromar.Multiset
                       Chromar.MAttrs
                       Chromar

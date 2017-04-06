@@ -3,7 +3,7 @@ module Chromar.Observables where
 import Numeric
 import qualified System.Random as R
 import Chromar.Multiset
-import Chromar.Core
+import Chromar.Sim
 
 type Obs = Double
 
@@ -83,7 +83,7 @@ writeObs fn fs ss = writeFile fn (unlines obsS)
     obsS = header : map showTObs obs
 
 run
-    :: (Eq a, Show a)
+    :: (Ord a, Show a)
     => Model a -> Int -> [Observable a] -> IO ()
 run (Model {rules = rs
            ,initState = s}) n obss = do
@@ -92,7 +92,7 @@ run (Model {rules = rs
     printObs traj obss
 
 runW
-    :: (Eq a, Show a)
+    :: (Ord a, Show a)
     => Model a -> Int -> FilePath -> [Observable a] -> IO ()
 runW (Model {rules = rs
             ,initState = s}) n fn obss = do
@@ -101,7 +101,7 @@ runW (Model {rules = rs
     writeObs fn obss traj
 
 runT
-    :: (Eq a, Show a)
+    :: (Ord a, Show a)
     => Model a -> Time -> [Observable a] -> IO ()
 runT (Model {rules = rs
             ,initState = s}) t obss = do
@@ -110,7 +110,7 @@ runT (Model {rules = rs
     printObs traj obss
 
 runTW
-    :: (Eq a, Show a)
+    :: (Ord a, Show a)
     => Model a -> Time -> FilePath -> [Observable a] -> IO ()
 runTW (Model {rules = rs
              ,initState = s}) t fn obss = do
