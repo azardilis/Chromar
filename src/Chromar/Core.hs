@@ -96,7 +96,7 @@ step
 step rules (gen, State mix t n) = (gen', State mix' (t + dt) (n + 1))
   where
     rxns = concatMap (\r -> r mix t) rules
-    actRxns = filter (\r -> rate r > 0.0) rxns
+    actRxns = filter (\r -> act r > 0.0) rxns
     (rxn, dt, gen') = sample gen actRxns
     mix' = apply rxn mix
 
