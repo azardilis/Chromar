@@ -1,8 +1,15 @@
 module Chromar.Multiset where
 
 import Data.List (find)
+import Data.Set (Set)
+import qualified Data.Set as S
 
 type Multiset a = [(a, Int)]
+
+dom
+    :: Ord a
+    => Multiset a -> Set a
+dom m = S.fromList (map fst m)
 
 frequencies
     :: Eq a
