@@ -7,7 +7,10 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import qualified System.Random as R
 import Data.List (find)
+import Data.MultiSet (MultiSet)
+import qualified Data.MultiSet as MS
 import Chromar.Multiset
+import Chromar.IMultiset
 import Chromar.RuleQuotes
 
 type Rid = Int
@@ -18,7 +21,7 @@ type Rule a = Multiset a -> Time -> [Rxn a]
 
 data SimState a = SimState
     { t :: Double
-    , s :: Multiset a
+    , s :: MultiSet a
     , rcount :: Int
     , incl :: Map a (Set Rid)
     , rxns :: Map Rid (Rxn a)
@@ -35,14 +38,11 @@ data Model a = Model
     }
 
 data Rxn a = Rxn
-    { lhs :: Multiset a
-    , rhs :: Multiset a
+    { lhs :: MultiSet a
+    , rhs :: MultiSet a
     , rate :: !Double
     , act :: !Double  
     } deriving (Eq, Show)
-
-outState :: SimState a -> State a
-outState sm = State (s sm) (t sm) 1
 
 getM :: State a -> Multiset a
 getM (State m _ _) = m
@@ -70,7 +70,7 @@ initialise
 initialise rs m =
     SimState
     { t = 0.0
-    , s = m
+    , s = MS.fromOccurList m
     , rcount = rc
     , incl = inclMap
     , rxns = M.fromList rxnMap
@@ -84,11 +84,11 @@ initialise rs m =
             (S.union)
             [ (a, S.singleton i)
             | (i, r) <- rxnMap
-            , (a, _) <- lhs r ]
+            , (a, _) <- MS.toOccurList (lhs r) ]
 
 delRxns
     :: Ord a
-    => a -> Map a (Set Rid) -> Map Rid (Rxn a) -> Multiset a -> Map Rid (Rxn a)
+    => a -> Map a (Set Rid) -> Map Rid (Rxn a) -> MultiSet a -> Map Rid (Rxn a)
 delRxns ag incl rxs s' =
     M.fromList
         [ ( ri
@@ -105,7 +105,7 @@ delRxns ag incl rxs s' =
 
 updRxns
     :: Ord a
-    => a -> Map a (Set Rid) -> Map Rid (Rxn a) -> Multiset a -> Map Rid (Rxn a)
+    => a -> Map a (Set Rid) -> Map Rid (Rxn a) -> MultiSet a -> Map Rid (Rxn a)
 updRxns ag incl rxs s' =
     M.fromList
         [ ( ri
@@ -119,7 +119,7 @@ updRxns ag incl rxs s' =
         , let rx = rxs ! ri
         , let nact = fullRate (lhs rx, s', rate rx),
           nact > 0.0 ]
-        
+
 negUpdate
     :: Ord a
     => Rxn a -> SimState a -> SimState a
@@ -136,8 +136,8 @@ negUpdate rxn SimState {t = t
     , rxns = rxns'
     }
   where
-    s' = s `diff` (lhs rxn)
-    l = fst . head $ (lhs rxn)
+    s' = s `mdiff` (lhs rxn)
+    l = fst . head $ (MS.toOccurList $ lhs rxn)
     dRxns = delRxns l incl rxns s'
     uRxns = updRxns l incl rxns s'
     dRxnIds = S.fromList (M.keys dRxns)
@@ -146,7 +146,7 @@ negUpdate rxn SimState {t = t
     rxns' = M.difference (M.union uRxns rxns) dRxns
     incl' = if (null lRs) then (M.delete l incl)
             else  (M.insert l lRs incl)
-    
+
 posUpdate
     :: Ord a
     => Rxn a -> [Rule a] -> SimState a -> SimState a
@@ -155,7 +155,7 @@ posUpdate rxn rs SimState {t = t
                           ,rcount = rcount
                           ,incl = incl
                           ,rxns = rxns}
-    | M.member r incl =
+    | MS.member r s =
         SimState
         { t = t
         , s = s'
@@ -172,8 +172,8 @@ posUpdate rxn rs SimState {t = t
         , rxns = rxns''
         }
   where
-    s' = s `plus` (rhs rxn)
-    r = fst . head $ (rhs rxn)
+    s' = s `mplus` (rhs rxn)
+    r = fst . head $ (MS.toOccurList $ rhs rxn)
     uRxns = updRxns r incl rxns s'
     uRxnIds = S.fromList (M.keys uRxns)
     lRs = S.union uRxnIds (incl ! r)
@@ -188,7 +188,7 @@ posUpdate rxn rs SimState {t = t
     rcount' = rcount + nrxns
     rxns'' = M.union (M.fromList (zip [rcount + 1 .. rcount'] rrxns)) rxns
     incl'' = M.insert r (S.fromList [rcount + 1 .. rcount']) incl
-
+    
 updateState
     :: (Ord a)
     => Rxn a -> [Rule a] -> Time -> SimState a -> SimState a
@@ -213,16 +213,16 @@ updateState rxn rs dt SimState {t = t
   
 fullRate
     :: (Ord a)
-    => (Multiset a, Multiset a, Double) -> Double
-fullRate (m1, m2, br) = fromIntegral (mults m1 m2) * br
+    => (MultiSet a, MultiSet a, Double) -> Double
+fullRate (m1, m2, br) = fromIntegral (mmults m1 m2) * br
 
 nrepl :: ([Int], [a]) -> [a]
 nrepl (mults, elems) = concat [replicate m e | (m, e) <- zip mults elems]
 
 apply
     :: (Ord a)
-    => Rxn a -> Multiset a -> Multiset a
-apply rxn mix = mix `diff` (lhs rxn) `plus` (rhs rxn)
+    => Rxn a -> MultiSet a -> MultiSet a
+apply rxn mix = mix `mdiff` (lhs rxn) `mplus` (rhs rxn)
 
 selectRxn :: Double -> Double -> [Rxn a] -> Rxn a
 selectRxn _ _ [] = error "deadlock"
@@ -252,8 +252,8 @@ step rules (gen, sm) = (gen', sm')
 
 simulate
     :: (Ord a)
-    => R.StdGen -> [Rule a] -> Multiset a -> [State a]
+    => R.StdGen -> [Rule a] -> Multiset a -> [SimState a]
 simulate gen rules init =
-    map (outState . snd) $ iterate (step rules) (gen, initSmState)
+    map snd $ iterate (step rules) (gen, initSmState)
   where
     initSmState = initialise rules init
