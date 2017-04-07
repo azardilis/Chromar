@@ -6,7 +6,9 @@ module Main where
 import Data.List
 import qualified System.Random as R
 import Data.Random.Normal
-import Chromar
+import Data.MultiSet (MultiSet)
+import qualified Data.MultiSet as MS
+import SChromar
 import Env
 
 data Attrs = Attrs
@@ -62,15 +64,6 @@ logf' t = 1.0 / (1.0 + exp (-100.0 * (t - 2604.0)))
 logs' :: Double -> Double
 logs' t = 1.0 / (1.0 + exp (-100.0 * (t - 8448.0)))
 
-nseeds = Observable {name = "nseeds", gen = countM . select isSeed}
-
-nplants = Observable { name = "nplants", gen  = countM . select isPlant }
-
-nfplants = Observable { name = "nfplants", gen = countM . select isFPlant }
-           
-dev1 = Observable { name = "dev1", gen = sumM dg . selectAttr getInd 1 }
-dev2 = Observable { name = "dev2", gen = sumM dg . selectAttr getInd 2 }
-
 mkSt :: IO (Multiset Agent)
 mkSt = do
   let n = 100
@@ -103,24 +96,39 @@ devfp = [rule| FPlant{dg=d} --> FPlant{dg=d+disp} @1.0 |]
 
 transfp =
     [rule| FPlant{tob=tb,attr=a,dg=d} -->
-                  Seed{tob=time, attr=a, dg=0.0, art=0.0} @logs' d |]
+                  {1} Seed{tob=time, attr=a, dg=0.0, art=0.0} @logs' d |]
 
-fname = "models/seedsModel/out/outm.txt"
+fname = "out/outm.txt"
 
-showState :: SimState Agent -> String
-showState sst = show (t sst) ++ " " ++ (show nseeds)
+
+accNs :: Agent -> Int -> (Int, Int, Int) -> (Int, Int, Int)
+accNs Seed{} n (ns, np, nfp) = (ns+n, np, nfp)
+accNs Plant{} n (ns, np, nfp) = (ns, np+n, nfp)
+accNs FPlant{} n (ns, np, nfp) = (ns, np, nfp+n)
+
+nTyps :: MultiSet Agent -> (Int, Int, Int)
+nTyps mix = MS.foldOccur accNs (0, 0, 0) mix
+
+showSt :: SimState Agent -> String
+showSt sst =
+    intercalate
+        " "
+        [ show (t sst)
+        , show ns
+        , show np
+        , show nfp
+        ]
   where
     mix = s sst
-    nseeds = sum [1 |(Seed{}, _) <- mix]
+    (ns, np, nfp) = nTyps mix
 
 writeTraj :: FilePath -> [SimState Agent] -> IO ()
-writeTraj fn ssts = writeFile fn (unlines $ map showState ssts)
+writeTraj fn ssts = writeFile fn (unlines $ map showSt ssts)
 
 main = do
   si <- mkSt
-  let g = R.mkStdGen 10
+  g <- R.getStdGen
   let rules = [dev, trans, devp, transp, devfp, transfp]
-  let m = Model {rules=rules, initState=si}
-  let t = (365*1*24)
-  runTW m t fname [nseeds]
---  writeTraj fname (take 100000 $ simulate g rules si)
+  let tend = (365 * 1 * 24)
+  let traj = takeWhile (\sst -> t sst < tend) (simulate g rules si)
+  writeTraj fname traj
