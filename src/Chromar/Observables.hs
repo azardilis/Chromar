@@ -3,7 +3,7 @@ module Chromar.Observables where
 import Numeric
 import qualified System.Random as R
 import Chromar.Multiset
-import Chromar.Sim
+import Chromar.Core
 
 type Obs = Double
 
