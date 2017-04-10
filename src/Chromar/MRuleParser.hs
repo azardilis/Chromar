@@ -50,7 +50,7 @@ lagent :: Parser String
 lagent = do
   agentNm <- name
   attrs <- braces (commaSep attr)
-  return (agentNm ++ "{" ++ (intercalate "," attrs) ++ "}")
+  return (agentNm ++ "{" ++ intercalate "," attrs ++ "}")
 
 mult :: Parser String
 mult = braces (many1 (noneOf ['}']))
@@ -60,7 +60,7 @@ ragent = do
   m <- option "1" mult
   agentNm <- name
   attrs <- braces (commaSep attr)
-  return (m, agentNm ++ "{" ++ (intercalate "," attrs) ++ "}")
+  return (m, agentNm ++ "{" ++ intercalate "," attrs ++ "}")
 
 lhsParser :: Parser [String]
 lhsParser = commaSep lagent
@@ -103,7 +103,5 @@ parseRule = do
 contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> {2} A{x=f x} @1.0 [x + 1 + 5] "
 
 go = case parse parseRule "rule" contents of
-  (Left err) -> (show err)
+  (Left err) -> show err
   (Right val) -> show val
-  
-  

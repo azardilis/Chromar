@@ -1,12 +1,10 @@
 module Chromar.Sim where
 
-import Data.Map.Lazy (Map)
-import Data.Map.Lazy((!))
+import Data.Map.Lazy(Map, (!))
 import qualified Data.Map.Lazy as M
 import Data.Set (Set)
 import qualified Data.Set as S
 import qualified System.Random as R
-import Data.List (find)
 import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MS
 import Chromar.Multiset
@@ -81,7 +79,7 @@ initialise rs m =
     rxnMap = zip [1 .. rc] rxs
     inclMap =
         M.fromListWith
-            (S.union)
+            S.union
             [ (a, S.singleton i)
             | (i, r) <- rxnMap
             , (a, _) <- MS.toOccurList (lhs r) ]
@@ -136,16 +134,16 @@ negUpdate rxn SimState {t = t
     , rxns = rxns'
     }
   where
-    s' = s `mdiff` (lhs rxn)
-    l = fst . head $ (MS.toOccurList $ lhs rxn)
+    s' = s `mdiff` lhs rxn
+    l = fst . head $ MS.toOccurList (lhs rxn)
     dRxns = delRxns l incl rxns s'
     uRxns = updRxns l incl rxns s'
     dRxnIds = S.fromList (M.keys dRxns)
     uRxnIds = S.fromList (M.keys uRxns)
     lRs = S.union uRxnIds (S.difference (incl ! l) dRxnIds)
     rxns' = M.difference (M.union uRxns rxns) dRxns
-    incl' = if (null lRs) then (M.delete l incl)
-            else  (M.insert l lRs incl)
+    incl' = if null lRs then M.delete l incl
+            else M.insert l lRs incl
 
 posUpdate
     :: Ord a
@@ -172,14 +170,14 @@ posUpdate rxn rs SimState {t = t
         , rxns = rxns''
         }
   where
-    s' = s `mplus` (rhs rxn)
-    r = fst . head $ (MS.toOccurList $ rhs rxn)
+    s' = s `mplus` rhs rxn
+    r = fst . head $ MS.toOccurList (rhs rxn)
     uRxns = updRxns r incl rxns s'
     uRxnIds = S.fromList (M.keys uRxns)
     lRs = S.union uRxnIds (incl ! r)
     rxns' = M.union uRxns rxns
-    incl' = if (null lRs) then (M.delete r incl)
-            else  (M.insert r lRs incl)
+    incl' = if null lRs then M.delete r incl
+            else M.insert r lRs incl
     rrxns =
         concat
             [ rl (ms [r]) t
@@ -202,13 +200,13 @@ updateState rxn rs dt SimState {t = t
     simSt' =
         negUpdate
             rxn
-            (SimState
+            SimState
              { t = t'
              , s = s
              , rcount = rcount
              , incl = incl
              , rxns = rxns
-             })
+             }
     simSt'' = posUpdate rxn rs simSt'
   
 fullRate
@@ -222,7 +220,7 @@ nrepl (mults, elems) = concat [replicate m e | (m, e) <- zip mults elems]
 apply
     :: (Ord a)
     => Rxn a -> MultiSet a -> MultiSet a
-apply rxn mix = mix `mdiff` (lhs rxn) `mplus` (rhs rxn)
+apply rxn mix = mix `mdiff` lhs rxn `mplus` rhs rxn
 
 selectRxn :: Double -> Double -> [Rxn a] -> Rxn a
 selectRxn _ _ [] = error "deadlock"
@@ -231,7 +229,7 @@ selectRxn acc n (rxn:rxns)
     | n < acc' = rxn
     | otherwise = selectRxn acc' n rxns
   where
-    acc' = acc + (act rxn)
+    acc' = acc + act rxn
 
 sample :: R.StdGen -> [Rxn a] -> (Rxn a, Double, R.StdGen)
 sample gen rxns = (selectRxn 0.0 b rxns, dt, g2)

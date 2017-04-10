@@ -25,6 +25,6 @@ mmults
     => MultiSet a -> MultiSet a -> Int
 mmults m1 m2 =
     product
-        [ perms (MS.occur el m2) m
+        [ mperms (MS.occur el m2) m
         | (el, m) <- MS.toOccurList m1 ]
 
