@@ -6,8 +6,8 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TI
 import qualified Data.Map.Strict as Map
 
-dataFile = "models/seedsModel/data/weatherValencia10yrs.csv"
---dataFile = "data/weatherValencia10yrs.csv"
+--dataFile = "models/seedsModel/data/weatherValencia10yrs.csv"
+dataFile = "data/weatherValencia10yrs.csv"
 
 temp' = unsafePerformIO (readTable dataFile 4)
 photo' = unsafePerformIO (readTable dataFile 2)
