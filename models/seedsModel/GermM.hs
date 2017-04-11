@@ -9,19 +9,16 @@ import qualified System.Random as R
 import SChromar
 import Env
 
-data Agent
-    = Plant { mass :: !Double
-            , area :: !Double
-            , wct :: !Double
-            , dg :: !Double}
-    deriving (Ord, Show)
-
+data Agent = FPlant
+    { mass :: !Double
+    , area :: !Double
+    , dg :: !Double
+    } deriving (Ord, Show)
 
 instance Eq Agent where
   (==) a a' = (mass a == mass a') && (dg a == dg a')
 
-
-si = ms [Plant{mass=3.2e-5, area=sla 3.2e-5 0.0 0.0, wct=0.0, dg=0.0}]
+si = ms [FPlant{mass=3.2e-1, area=sla 3.2e-1 0.0 0.0, dg=0.0}]
 
 pchron = 720
 
@@ -31,21 +28,25 @@ sla m a pt = max a (m*a')
     slaE = 0.02
     a' = slaCot * exp(-slaE * pt)
 
-par = when day (constant 100) `orElse` (constant 0)
+par = when day (constant p) `orElse` (constant 0)
+  where
+    p = 1.6 / 24.0
+
+rue = 3.0
 
 $(return [])
 
-devp =
-  [rule| Plant{dg=d, wct=w} --> Plant{dg=d+ptu* fp (wcUpd time w), wct=wcUpd time w} @1.0 |]
+
+devfp = [rule| FPlant{dg=d} --> FPlant{dg=d+disp} @1.0 |]
 
 devm =
-  [rule| Plant{mass=m, area=a, dg=d} --> Plant{mass=m+(sla m a d * par), area=sla m a d}
+  [rule| FPlant{mass=m, area=a, dg=d} --> FPlant{mass=m+(sla m a d * par * rue), area=sla m a d}
          @(temp / pchron) |]
 
 fname = "out/outMass.txt"
 
 accNs :: Agent -> Int -> (Double, Double, Double) -> (Double, Double, Double)
-accNs Plant{mass=m, area=a, dg=d} n (ar, mass, dg) = (ar+a, mass + m, dg+d)
+accNs FPlant{mass=m, area=a, dg=d} n (ar, mass, dg) = (ar+a, mass + m, dg+d)
 
 massArea :: MultiSet Agent -> (Double, Double, Double)
 massArea mix = MS.foldOccur accNs (0.0, 0.0, 0.0) mix
@@ -59,12 +60,12 @@ showSt sst = show (t sst) ++ " " ++ show  area ++ " " ++ show mass ++ " " ++ sho
 writeTraj :: FilePath -> [SimState Agent] -> IO ()
 writeTraj fn ss = writeFile fn (unlines $ map showSt ss)
 
+showTraj :: [SimState Agent] -> IO ()
+showTraj ss = mapM_ print (map showSt ss)
+
 main = do
   g <- R.getStdGen
-  let rules = [devp, devm]
-  let tend = 800
+  let rules = [devfp, devm]
+  let tend = 500
   let traj = takeWhile (\sst -> t sst < tend) (simulate g rules si)
   writeTraj fname traj
-      
-
-
