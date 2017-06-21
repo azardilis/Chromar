@@ -35,12 +35,17 @@ perms n k
   where
     numsToOne n = enumFromThenTo n (n - 1) 1
 
+binom :: Int -> Int -> Int
+binom n k = perms n k `quot` (product $ numsToOne k)
+  where
+    numsToOne n = enumFromThenTo n (n - 1) 1
+
 mults
     :: (Eq a)
     => Multiset a -> Multiset a -> Int
 mults m1 m2 =
     product
-        [ perms (occur el m2) m
+        [ binom (occur el m2) m
         | (el, m) <- m1 ]
 
 diff
