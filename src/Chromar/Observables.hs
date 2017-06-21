@@ -70,7 +70,7 @@ showObs = mapM_ show'
 showTObs :: TObs -> String
 showTObs (t, obss) = formatFloatN 2 t ++ " " ++ obssS
   where
-    obssS = unwords (map (formatFloatN 2) obss)
+    obssS = unwords (map show obss)
 
 writeObs
     :: (Show a)
@@ -116,4 +116,27 @@ runTW (Model {rules = rs
              ,initState = s}) t fn obss = do
     rgen <- R.getStdGen
     let traj = takeWhile (\s -> getT s < t) (simulate rgen rs s)
+    writeObs fn obss traj
+
+everyN n xs =
+  case drop (n - 1) xs of
+    [] -> []
+    (y:ys) -> y : everyN n ys
+
+runTWskipN
+    :: (Ord a, Show a)
+    => Int -> Model a -> Time -> FilePath -> [Observable a] -> IO ()
+runTWskipN n (Model {rules = rs
+                  ,initState = s}) t fn obss = do
+    rgen <- R.getStdGen
+    let traj = everyN n (takeWhile (\s -> getT s < t) (simulate rgen rs s))
+    writeObs fn obss traj
+
+runUntil
+    :: (Ord a, Show a)
+    => Model a -> (Multiset a -> Bool) -> FilePath -> [Observable a] -> IO ()
+runUntil (Model {rules = rs
+             ,initState = s}) fb fn obss = do
+    rgen <- R.getStdGen
+    let traj = takeWhile (\s -> fb (getM s)) (simulate rgen rs s)
     writeObs fn obss traj

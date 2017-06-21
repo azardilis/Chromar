@@ -17,7 +17,7 @@ data SRule = SRule
     , srate :: Exp
     , cond :: Exp
     } deriving (Show)
-    
+
 langDef =
     emptyDef
     { Tok.reservedOpNames = ["-->", "@", "="]

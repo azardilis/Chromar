@@ -1,35 +1,48 @@
 module Main where
 
-import Control.Monad
+import Control.Monad hiding (when)
 import qualified System.Random as R
 import Data.Random.Normal
 import Chromar.Fluent
 import Env
 
 data Attrs = Attrs
-  { ind :: Int
-  , psi :: Double
-  } deriving (Eq, Show)
-
+    { psi :: !Double
+    } deriving (Eq, Show)
 
 data Agent
-  = Seed { attr :: Attrs
-        ,  dg :: Double
-        ,  art :: Double}
-  | Plant { attr :: Attrs
-         ,  dg :: Double
-         ,  wct :: Double}
-  | FPlant { attr :: Attrs
-          ,  dg :: Double}
-  deriving (Eq, Show)
+    = Seed { attr :: !Attrs
+           , dg :: !Double
+           , art :: !Double
+           , mass :: !Double}
+    | Plant { attr :: !Attrs
+            , dg :: !Double
+            , wct :: !Double
+            , mass :: !Double
+            , area :: !Double}
+    | FPlant { attr :: !Attrs
+             , dg :: !Double
+             , mass :: !Double
+             , area :: !Double}
+    deriving (Eq, Show)
 
+pchron = 720
 
-showPsi :: Agent -> IO ()
-showPsi (Seed { attr=a, dg=_, art=_ }) = print (psi a)
+marea m pt = m * (slaCot * exp(-slaE * pt))
+  where
+    slaCot = 2*0.144
+    slaE = 0.02
 
+par = when day (constant p) `orElse` (constant 0)
+  where
+    p = 1.6 / 24.0
 
-data DState = DState { dtime :: Double,
-                       mixt :: [Agent] } deriving (Show)
+rue = 3.0
+
+data DState = DState
+    { dtime :: Double
+    , mixt :: [Agent]
+    } deriving (Show)
 
 data Summ = Summary Int Int Int
 
@@ -45,76 +58,62 @@ isPlant _ = False
 isFPlant (FPlant { attr=at, dg=d } ) = True
 isFPlant _ = False
 
-log' :: Double -> Double
-log' t = 1.0 / (1.0 + exp (-100.0 * (t - 1000.0)))
-
-logf' :: Double -> Double
-logf' t = 1.0 / (1.0 + exp (-100.0 * (t - 2604.0)))
-
-logs' :: Double -> Double
-logs' t = 1.0 / (1.0 + exp (-100.0 * (t - 8448.0)))
+accNs :: Agent -> (Int, Int, Int) -> (Int, Int, Int)
+accNs (Seed{}) (ns, nf, nfp) = (ns+1, nf, nfp)
+accNs (Plant{}) (ns, nf, nfp) = (ns, nf+1, nfp)
+accNs (FPlant{}) (ns, nf, nfp) = (ns, nf, nfp+1)
 
 summary :: DState -> (Double, Summ)
-summary ds = (t, Summary nseeds nplants nfplants)
+summary ds = (t, Summary ns nf nfp)
   where
     m = mixt ds
     t = dtime ds
-    nseeds = length $ filter isSeed m
-    nplants = length $ filter isPlant m
-    nfplants = length $ filter isFPlant m
+    (ns, nf, nfp) = foldr accNs (0, 0, 0) m
 
 mkSt :: [Double] -> ([Agent], [Double])
 mkSt psis =
-  ( [ Seed {attr = Attrs {ind = i, psi = pi}, dg = 0.0, art = 0.0}
-    | (pi, i) <- zip pss [1 .. n]
+  ( [ Seed {attr = Attrs {psi = pi}, dg = 0.0, art = 0.0, mass=1.6e-5}
+    | pi <- pss
     ]
   , drop n psis)
   where
-    n = 1000
+    n = 10000
     pss = take n psis
      
-mkSt' :: [Agent]
-mkSt' = ( replicate 3 (Seed{attr = Attrs {ind=0, psi=(-0.5)}, dg=0.0, art=0.0}) ++
-          replicate 18 (Seed{attr = Attrs {ind=0, psi=(-0.388)}, dg=0.0, art=0.0}) ++
-          replicate 66 (Seed{attr = Attrs {ind=0, psi=(-0.2777)}, dg=0.0, art=0.0}) ++
-          replicate 161 (Seed{attr = Attrs {ind=0, psi=(-0.1666)}, dg=0.0, art=0.0}) ++
-          replicate 252 (Seed{attr = Attrs {ind=0, psi=(-0.05555)}, dg=0.0, art=0.0}) ++
-          replicate 3 (Seed{attr = Attrs {ind=0, psi=0.5}, dg=0.0, art=0.0}) ++
-          replicate 18 (Seed{attr = Attrs {ind=0, psi=0.388}, dg=0.0, art=0.0}) ++
-          replicate 66 (Seed{attr = Attrs {ind=0, psi=0.2777}, dg=0.0, art=0.0}) ++
-          replicate 161 (Seed{attr = Attrs {ind=0, psi=0.1666}, dg=0.0, art=0.0}) ++
-          replicate 252 (Seed{attr = Attrs {ind=0, psi=0.05555}, dg=0.0, art=0.0}) )
-
-
 stepF :: DState -> DState
-stepF DState { dtime=t, mixt=m } = DState { dtime=t+1, mixt=fmap foo m }
-  where
-    foo = transAgent . (devAgent t)
-
-devAgent :: Time -> Agent -> Agent
-devAgent t (Seed {attr = atr, dg = d, art = a}) =
-  Seed {attr = atr, dg = d + (htu t a (psi atr)), art = a + (arUpd mst tmp)}
+stepF DState { dtime=t, mixt=m } = DState { dtime=t+1, mixt=concatMap foo m }
   where
     mst = at moist t
     tmp = at temp t
-devAgent t (Plant {attr = atr, dg = d, wct = w}) =
-  Plant {attr=atr, dg = d + pt * fp (wcUpd t w), wct = wcUpd t w}
+    cpar = at par t
+    foo = transAgent . (devAgent (t, mst, tmp, cpar))
+
+devAgent :: (Double, Double, Double, Double) -> Agent -> Agent
+devAgent (t, mst, tmp, _) (Seed {attr = atr, dg = d, art = a, mass=m}) =
+  Seed {attr = atr, dg = d + (htu t a (psi atr)), art = a + (arUpd mst tmp), mass=m}
+devAgent (t, _, _, cpar) (Plant {attr = atr, dg = d, wct = w, mass=m, area=a}) =
+  Plant {attr=atr, dg = d + pt * fp (wcUpd t w), wct = wcUpd t w, mass=m', area=a'}
   where
     pt = at ptu t
-devAgent t (FPlant {attr = atr, dg = d}) = FPlant {attr=atr, dg = d + ds}
+    m' = m + (a * cpar * rue)
+    a' = max a (marea m' d)
+devAgent (t, _, _, cpar) (FPlant {attr = atr, dg = d, mass=m, area=a}) =
+  FPlant {attr=atr, dg = d + ds, mass=m', area=a'}
   where
     ds = at disp t
+    m' = m + (a * cpar * rue)
+    a' = max a (marea m' d)
 
-transAgent :: Agent -> Agent
-transAgent Seed{attr=atr, dg=d, art=a}
-  | d > 1000.0 = Plant{attr=atr, dg=0.0, wct=0.0}
-  | otherwise = Seed{attr=atr, dg=d, art=a}
-transAgent Plant{attr=a, dg=d, wct=w}
-  | d > 2604.0 = FPlant{attr=a,dg=0.0}
-  | otherwise = Plant{attr=a, dg=d, wct=w}
-transAgent FPlant{attr=a,dg=d}
-  | d > 8448.0 = Seed{attr=a, dg=0.0, art=0.0}
-  | otherwise = FPlant{attr=a,dg=d}                   
+transAgent :: Agent -> [Agent]
+transAgent s@Seed{attr=atr, dg=d, art=ar, mass=m}
+  | d > 1000.0 = [Plant{attr=atr, dg=0.0, wct=0.0, mass=m, area=marea m 0.0}]
+  | otherwise = [s]
+transAgent p@Plant{attr=atr, dg=d, wct=w,mass=m, area=a}
+  | d > 2604.0 = [FPlant{attr=atr,dg=0.0, mass=m, area=a}]
+  | otherwise = [p]
+transAgent f@FPlant{attr=atr,dg=d, mass=m, area=a}
+  | d > 8448.0 = replicate (floor $ m/1.6e-5) (Seed{attr=atr, dg=0.0, art=0.0, mass=1.6e-5})
+  | otherwise = [f]
 
 out :: [DState] -> IO ()
 out dss = mapM_ print summs
@@ -139,22 +138,24 @@ outD dss = mapM_ print summs
   where
     summs = map summD dss
 
+outDD :: [DState] -> IO ()
+outDD dss = mapM_ print (map (show . dtime) dss)
+
 fname i = "out/outDW/outD" ++ (show i) ++ ".txt"
 
 doSimulation :: [Double] -> Int -> IO ([Double])
 doSimulation psis i = do
     print i
     let (s, psis') = mkSt psis
-    let nsteps = (365 * 24 * 2)
+    let nsteps = (365 * 24 * 1)
     let initS =
             DState
             { dtime = 0
             , mixt = s
             }
     let traj = take nsteps $ iterate stepF initS
-    outF (fname i) traj
+    outDD traj
     return psis'
-
 
 go :: [Double] -> Int -> IO ()
 go psis 0 = return ()

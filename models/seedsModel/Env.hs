@@ -6,13 +6,14 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TI
 import qualified Data.Map.Strict as Map
 
---dataFile = "models/seedsModel/data/weatherValencia10yrs.csv"
-dataFile = "data/weatherValencia10yrs.csv"
+--dataFile = "models/seedsModel/data/weatherValencia3yrs.csv"
+dataFile = "models/seedsModel/data/rad/weatherValencia2yrsRad.csv"
 
-temp' = unsafePerformIO (readTable dataFile 4)
-photo' = unsafePerformIO (readTable dataFile 2)
-day' = unsafePerformIO (readTable dataFile 3)
-moist = unsafePerformIO (readTable dataFile 5)
+temp' = repeatEvery 17520 (unsafePerformIO (readTable dataFile 4))
+photo' = repeatEvery 17520 (unsafePerformIO (readTable dataFile 2))
+day' = repeatEvery 17520 (unsafePerformIO (readTable dataFile 3))
+moist = repeatEvery 17520 (unsafePerformIO (readTable dataFile 5))
+light' = repeatEvery 17520 (unsafePerformIO (readTable dataFile 6))
 
 fi = 0.598
 --fi = 0.737
@@ -31,6 +32,10 @@ to = 22
 
 tempBase = constant 3.0
 day  = day' <>*> constant 0.0
+
+light = (*) <$> light' <*> constant (2.0153/3600)
+
+par = when day light `orElse` (constant 0)
 
 idev = (*)
        <$> constant 0.374
@@ -123,7 +128,7 @@ disp = when (ntemp <>*> constant 0.0) ntemp `orElse` (constant 0.0) where
 parseLine :: Int -> T.Text -> (Double, Double)
 parseLine n ln = (read $ T.unpack time, read $ T.unpack temp) where
   elems = T.splitOn (T.pack ",") ln
-  time = T.dropEnd 1 (T.drop 1 $ elems !! 0)
+  time = elems !! 0
   temp = elems !! n
 
 

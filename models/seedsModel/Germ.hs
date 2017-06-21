@@ -96,8 +96,6 @@ avgSTime =
   , gen = sumM (avg . ssTimes) . select isSystem
   }
 
-
-
 dev1 = Observable { name = "dev1", gen = sumM dg . selectAttr getInd 1 }
 dev2 = Observable { name = "dev2", gen = sumM dg . selectAttr getInd 2 }
 dev3 = Observable { name = "dev3", gen = sumM dg . selectAttr getInd 3 }
@@ -201,7 +199,7 @@ everyN n xs =
     [] -> []
     (y:ys) -> y : everyN n ys
 
-              
+  
 runTW'
   :: (Eq a, Show a)
   => Model a -> Time -> FilePath -> Observable a -> IO ()

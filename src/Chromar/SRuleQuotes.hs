@@ -21,6 +21,7 @@ rule =
     , quoteType = undefined
     }
 
+
 --- pure action
 tFieldPat :: Set Name -> Name -> FieldExp -> FieldProd
 tFieldPat names freshNm (nm, VarE pnm) =
@@ -200,8 +201,8 @@ mkActExp s lhs r = AppE (VarE $ mkName "fullRate") args
 mkReturnStmt :: Exp -> Stmt
 mkReturnStmt = NoBindS
 
-mkRxnExp :: Name -> SRule -> Exp
-mkRxnExp s r = RecConE (mkName "Rxn") fields
+mkRxnExp :: Name -> Name -> SRule -> Exp
+mkRxnExp s t r = LamE [VarP s, VarP t] (RecConE (mkName "Rxn") fields)
   where
     lhsSym = mkName "lhs"
     rhsSym = mkName "rhs"
@@ -210,14 +211,12 @@ mkRxnExp s r = RecConE (mkName "Rxn") fields
     mrexps = AppE (VarE $ mkName "nrepl") (tuplify2 (ListE $ mults r) (ListE $ rexps r))
     lexps' = AppE (VarE $ mkName "mset") (ListE $ lexps r)
     rexps' = AppE (VarE $ mkName "mset") (ParensE mrexps)
-    rateExp = srate r
-    stExp = AppE (VarE $ mkName "MS.fromOccurList") (VarE s)
-    actExp = mkActExp stExp lexps' (srate r)
-    fields = [(lhsSym, lexps'), (rhsSym, rexps'), (rateSym, rateExp), (actSym, actExp)]
+    actExp = srate r --mkActExp (VarE s) lexps' (srate r)
+    fields = [(lhsSym, lexps'), (rhsSym, rexps'), (actSym, actExp)]
 
-mkCompStmts :: Name -> SRule -> Q [Stmt]
-mkCompStmts s r = do
-    let rxnExp = mkRxnExp s r
+mkCompStmts :: Name -> Name -> SRule -> Q [Stmt]
+mkCompStmts s t r = do
+    let rxnExp = mkRxnExp s t r
     let retStmt = mkReturnStmt rxnExp
     let guardStmt = NoBindS (cond r)
     patStmts <- mkLhs (lexps r)
@@ -227,7 +226,7 @@ ruleQuoter' :: SRule -> Q Exp
 ruleQuoter' r = do
     state <- newName "s"
     time <- newName "t"
-    stmts <- mkCompStmts state r
+    stmts <- mkCompStmts state time r 
     return $ LamE [VarP state, VarP time] (CompE stmts)
 
 fluentTransform :: SRule -> Q SRule

@@ -9,7 +9,6 @@ import Data.MultiSet (MultiSet)
 import qualified Data.MultiSet as MS
 import Chromar.Multiset
 import Chromar.IMultiset
-import Chromar.RuleQuotes
 
 type Rid = Int
 
@@ -38,7 +37,7 @@ data Model a = Model
 data Rxn a = Rxn
     { lhs :: MultiSet a
     , rhs :: MultiSet a
-    , rate :: !Double
+    , rate :: Double
     , act :: !Double  
     } deriving (Eq, Show)
 
@@ -186,7 +185,7 @@ posUpdate rxn rs SimState {t = t
     rcount' = rcount + nrxns
     rxns'' = M.union (M.fromList (zip [rcount + 1 .. rcount'] rrxns)) rxns
     incl'' = M.insert r (S.fromList [rcount + 1 .. rcount']) incl
-    
+
 updateState
     :: (Ord a)
     => Rxn a -> [Rule a] -> Time -> SimState a -> SimState a
@@ -208,7 +207,28 @@ updateState rxn rs dt SimState {t = t
              , rxns = rxns
              }
     simSt'' = posUpdate rxn rs simSt'
-  
+
+updateState'
+    :: (Ord a)
+    => Rxn a -> [Rule a] -> Time -> SimState a -> SimState a
+updateState' rxn rs dt SimState {t = t
+                                ,s = s
+                                ,rcount = rcount
+                                ,incl = incl
+                                ,rxns = rxns} =
+    SimState
+    { t = t'
+    , s = s'
+    , rcount = rcount
+    , incl = incl
+    , rxns = rxns'
+    }
+  where
+    t' = t + dt
+    s' = s `mdiff` (lhs rxn) `mplus` (rhs rxn)
+    rxs = concat [r (MS.toOccurList s') t' | r <- rs ]
+    rxns' = M.fromList (zip [1..length rxs] rxs)
+    
 fullRate
     :: (Ord a)
     => (MultiSet a, MultiSet a, Double) -> Double
@@ -246,7 +266,7 @@ step rules (gen, sm) = (gen', sm')
   where
     actRxns = filter (\r -> act r > 0.0) (M.elems (rxns sm))
     (rxn, dt, gen') = sample gen actRxns
-    sm' = updateState rxn rules dt sm
+    sm' = updateState' rxn rules dt sm
 
 simulate
     :: (Ord a)

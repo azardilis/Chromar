@@ -46,13 +46,13 @@ nc =
     { name = "ncells"
     , gen = aggregate ((+) . const 1.0) 0.0 . select isC
     }
-    
+
 conc1 =
     Observable
     { name = "conc1"
     , gen = aggregate ((+) . x) 0.0 . select (\at -> idx at == 1)
     }
-    
+
 total =
     Observable
     { name = "total"

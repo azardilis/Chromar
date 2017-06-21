@@ -41,18 +41,6 @@ getInd Seed { attr = a } = ind a
 getInd Plant { attr = a } = ind a
 getInd FPlant { attr = a } = ind a
 
-isSeed (Seed{ attr=at, dg=d, art=a }) = True
-isSeed _ = False
-
-isPlant (Plant { attr=at, dg=d, wct=w}) = True
-isPlant _ = False
-
-isFPlant (FPlant { attr=at, dg=d } ) = True
-isFPlant _ = False
-
-avg l  = let (t,n) = foldl' (\(b,c) a -> (a+b,c+1)) (0,0) l 
-         in (realToFrac(t)/realToFrac(n))
-
 log' :: Double -> Double
 --log' t = 1.0 / (1.0 + exp (-0.1 * (t - 950.0)))
 log' t = 1.0 / (1.0 + exp (-100.0 * (t - 1000.0)))
@@ -82,7 +70,7 @@ dev =
              Seed{attr=atr, dg = d + (htu time a (psi atr)), art=a + (arUpd moist temp)} @1.0 |]
   
 trans =
-  [rule| Seed{tob=tb, attr=atr, dg=d, art=a}-->
+  [rule| Seed{tob=tb, attr=atr, dg=d, art=a} -->
              Plant{tob=time,attr=atr, dg=0.0, wct=0.0} @log' d |]
 
 devp =
@@ -125,10 +113,14 @@ showSt sst =
 writeTraj :: FilePath -> [SimState Agent] -> IO ()
 writeTraj fn ssts = writeFile fn (unlines $ map showSt ssts)
 
+showTraj :: [SimState Agent] -> IO ()
+showTraj ss = mapM_ print (map showSt ss)
+
 main = do
   si <- mkSt
   g <- R.getStdGen
   let rules = [dev, trans, devp, transp, devfp, transfp]
   let tend = (365 * 1 * 24)
   let traj = takeWhile (\sst -> t sst < tend) (simulate g rules si)
+  --let traj = take 50000 (simulate g rules si)
   writeTraj fname traj
