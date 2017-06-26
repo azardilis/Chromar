@@ -90,7 +90,7 @@ parseRule = do
     op "@"
     rexpr <- many1 (noneOf ['['])
     cexpr <- option "True" (squares (many1 (noneOf [']'])))
-    return
+    return 
         SRule
         { lexps = createExps lhs
         , rexps = createExps ragentExps
