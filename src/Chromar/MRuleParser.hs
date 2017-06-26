@@ -16,7 +16,7 @@ data SRule = SRule
     , mults :: [Exp]
     , srate :: Exp
     , cond :: Exp
-    , decs :: [(String, Exp)]  
+    , decs :: [Dec]  
     } deriving (Show)
 
 langDef =
@@ -76,11 +76,16 @@ dec = do
   expr <- many1 (noneOf ",")
   return (vName, expr)
 
-whereParser :: Parser [(String, String)]
+valDec :: (String, String) -> Dec
+valDec (nm, sexpr) = ValD (VarP $ mkName nm) (NormalB expr) []
+  where
+    expr = createExp sexpr
+    
+whereParser :: Parser [Dec]
 whereParser = do
   op "where"
   decs <- commaSep dec
-  return decs
+  return (map valDec decs)
 
 createExp :: String -> Exp
 createExp exp =
@@ -104,7 +109,7 @@ parseRule = do
     op "@"
     rexpr <- many1 (noneOf ['['])
     cexpr <- option "True" (squares (many1 (noneOf [']'])))
-    wdecs <- whereParser
+    wdecs <- option [] whereParser
     return 
         SRule
         { lexps = createExps lhs
@@ -112,7 +117,7 @@ parseRule = do
         , mults = createExps multExps
         , srate = createExp rexpr
         , cond = createExp cexpr
-        , decs = map (\(nm, e) -> (nm, createExp e)) wdecs         
+        , decs = wdecs         
         }
 
 --- for testing
