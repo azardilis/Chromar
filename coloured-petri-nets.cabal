@@ -8,10 +8,10 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 library
-  build-depends:      base >=4.8 && <4.9,
+  build-depends:      base,
                       random >=1.1 && <1.2,
                       parsec >=3.1 && <3.2,
-                      template-haskell >=2.10 && <2.11,
+                      template-haskell >=2.10 && <2.12,
                       haskell-src-meta >= 0.6,
                       containers >=0.5,
                       multiset >= 0.3
@@ -31,21 +31,3 @@ library
   other-extensions:   BangPatterns
 
   default-language:   Haskell2010
-
-
-executable fm
-
- hs-source-dirs:    models/fm
- main-is:           Main.hs
- other-modules:     Env, Photo, Params
- ghc-options:       -O2
- build-depends:     base >=4.8 && <4.9,
-                    random >=1.1 && <1.2,
-                    text >= 1.2,
-                    Chart,
-                    Chart-diagrams,
-                    Chart-cairo,		    
-                    containers >=0.5,
-                    coloured-petri-nets,
-                    normaldistribution >= 1.1,
-                    multiset >= 0.3
