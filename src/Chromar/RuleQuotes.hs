@@ -186,6 +186,18 @@ tFExp (nm, exp) = do
     te <- tExp exp
     return (nm, te)
 
+tBody :: Body -> Q Body
+tBody (NormalB exp) = do
+  te <- tExp exp
+  return (NormalB te)
+tBody _ = error "expected NormalB constr"
+
+tDec :: Dec -> Q Dec
+tDec (ValD p bd xs) = do
+  tbd <- tBody bd
+  return (ValD p tbd xs)
+tDec _ = error "expected ValD constr"
+
 tuplify :: Name -> Exp -> Exp -> Exp
 tuplify s lhs r = TupE [lhs, VarE s, r]
 
@@ -207,20 +219,29 @@ mkRxnExp s r = RecConE (mkName "Rxn") fields
     rhsSym = mkName "rhs"
     rateSym = mkName "rate"
     actSym = mkName "act"
-    mrexps = AppE (VarE $ mkName "nrepl") (tuplify2 (ListE $ mults r) (ListE $ rexps r))
+    mrexps =
+        AppE
+            (VarE $ mkName "nrepl")
+            (tuplify2 (ListE $ mults r) (ListE $ rexps r))
     lexps' = AppE (VarE $ mkName "ms") (ListE $ lexps r)
     rexps' = AppE (VarE $ mkName "ms") (ParensE mrexps)
     rateExp = srate r
     actExp = mkActExp s lexps' (srate r)
-    fields = [(lhsSym, lexps'), (rhsSym, rexps'), (rateSym, rateExp), (actSym, actExp)]
+    fields =
+        [ (lhsSym, lexps')
+        , (rhsSym, rexps')
+        , (rateSym, rateExp)
+        , (actSym, actExp)
+        ]
 
 mkCompStmts :: Name -> SRule -> Q [Stmt]
 mkCompStmts s r = do
     let rxnExp = mkRxnExp s r
     let retStmt = mkReturnStmt rxnExp
     let guardStmt = NoBindS (cond r)
+    let letStmt = LetS (decs r)
     patStmts <- mkLhs (lexps r)
-    return $ patStmts ++ [guardStmt, retStmt]
+    return $ patStmts ++ [letStmt, guardStmt, retStmt]
 
 ruleQuoter' :: SRule -> Q Exp
 ruleQuoter' r = do
@@ -239,6 +260,7 @@ fluentTransform SRule {lexps = les
     re <- tExp r
     ce <- tExp c
     tres <- mapM tExp res
+    tds <- mapM tDec ds
     return
         SRule
         { lexps = les
@@ -246,7 +268,7 @@ fluentTransform SRule {lexps = les
         , mults = m          
         , srate = re
         , cond = ce
-        , decs = ds         
+        , decs = tds         
         }
 
 ruleQuoter :: String -> Q Exp
