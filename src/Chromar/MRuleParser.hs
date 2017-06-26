@@ -16,12 +16,13 @@ data SRule = SRule
     , mults :: [Exp]
     , srate :: Exp
     , cond :: Exp
+    , decs :: [(String, Exp)]  
     } deriving (Show)
 
 langDef =
     emptyDef
-    { Tok.reservedOpNames = ["-->", "@", "="]
-    , Tok.reservedNames = ["where"]
+    { Tok.reservedOpNames = ["-->", "@", "=", "where"]
+    , Tok.reservedNames = []
     }
 
 lexer :: Tok.TokenParser ()
@@ -68,6 +69,19 @@ lhsParser = commaSep lagent
 rhsParser :: Parser [(String, String)]
 rhsParser = commaSep ragent
 
+dec :: Parser (String, String)
+dec = do
+  vName <- name
+  op "="
+  expr <- many1 (noneOf ",")
+  return (vName, expr)
+
+whereParser :: Parser [(String, String)]
+whereParser = do
+  op "where"
+  decs <- commaSep dec
+  return decs
+
 createExp :: String -> Exp
 createExp exp =
     case parseExp exp of
@@ -90,6 +104,7 @@ parseRule = do
     op "@"
     rexpr <- many1 (noneOf ['['])
     cexpr <- option "True" (squares (many1 (noneOf [']'])))
+    wdecs <- whereParser
     return 
         SRule
         { lexps = createExps lhs
@@ -97,11 +112,12 @@ parseRule = do
         , mults = createExps multExps
         , srate = createExp rexpr
         , cond = createExp cexpr
+        , decs = map (\(nm, e) -> (nm, createExp e)) wdecs         
         }
 
 --- for testing
-contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> {2} A{x=f x} @1.0 [x + 1 + 5] "
+contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> {2} A{x=f x} @1.0 [x + 1 + 5] where a=1, b=2"
 
 go = case parse parseRule "rule" contents of
-  (Left err) -> show err
-  (Right val) -> show val
+  (Left err) -> error (show err)
+  (Right val) -> val

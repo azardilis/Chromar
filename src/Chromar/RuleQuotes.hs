@@ -234,7 +234,8 @@ fluentTransform SRule {lexps = les
                       ,rexps = res
                       ,mults = m         
                       ,srate = r
-                      ,cond = c} = do
+                      ,cond = c
+                      ,decs = ds} = do
     re <- tExp r
     ce <- tExp c
     tres <- mapM tExp res
@@ -245,6 +246,7 @@ fluentTransform SRule {lexps = les
         , mults = m          
         , srate = re
         , cond = ce
+        , decs = ds         
         }
 
 ruleQuoter :: String -> Q Exp

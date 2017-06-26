@@ -84,7 +84,8 @@ fillAttrs SRule {lexps = les
                 ,rexps = res
                 ,mults = m         
                 ,srate = r
-                ,cond = c} = do
+                ,cond = c
+                ,decs = ds} = do
     info <- reify (mkName "Agent")
     let aTyps = extractIntf info
     les' <- mapM (fPat aTyps) les
@@ -96,4 +97,5 @@ fillAttrs SRule {lexps = les
         , mults = m          
         , srate = r
         , cond = c
+        , decs = ds         
         }
