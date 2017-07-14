@@ -1,3 +1,4 @@
+
 {-# LANGUAGE  QuasiQuotes #-}
 {-# LANGUAGE  TemplateHaskell #-}
 
@@ -88,7 +89,8 @@ transp =
         Plant{mass=m, area=a, attr=atr, dg=d, wct=w} -->
         FPlant{mass=m, area=a, attr=atr, dg=0.0}
         @logf' d
-   |]
+
+|]
 
 devfp =
     [rule|

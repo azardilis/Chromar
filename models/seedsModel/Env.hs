@@ -51,6 +51,8 @@ idev'' = constant 0.626 <+*> idev'
 temp = max <$> (temp' <-*> tempBase) <*> pure 0.0
 thermal = when day temp `orElse` constant 0.0
 
+thr = mkFluent (\t -> (sum [at thermal (fromIntegral ti) | ti <- [1..t]]) / 24.0)
+
 pperiod =
   when (photo' <<*> constant 10.0) (constant 0.626) `orElse`
   (when (photo' <<*> constant 14.0) idev'' `orElse` constant 1.0)
