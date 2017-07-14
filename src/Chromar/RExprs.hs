@@ -4,12 +4,10 @@ module RExprs where
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Text.ParserCombinators.Parsec
 import Data.List
-import Language.Haskell.Meta.Parse
 import Text.Parsec
 import Language.Haskell.Meta.Parse
 import Language.Haskell.TH.Syntax
@@ -17,6 +15,7 @@ import Text.Parsec.String (Parser)
 import Text.Parsec.Language (emptyDef)
 import Text.Parsec.Token (makeTokenParser)
 import Data.Fixed
+import Data.Maybe
 
 import qualified Text.Parsec.Token as Tok
 
@@ -36,19 +35,15 @@ when eb er =
     ErF
     { at =
         \s t ->
-             if (at eb s t)
-                 then Just (at er s t)d
+             if at eb s t
+                 then Just (at er s t)
                  else Nothing
     }
 
 orElse :: ErF a (Maybe b) -> ErF a b -> ErF a b
 e1 `orElse` e2 =
     ErF
-    { at =
-        \s t ->
-             case (at e1 s t) of
-                 Just x -> x
-                 Nothing -> at e2 s t
+    { at = \s t -> fromMaybe (at e2 s t) (at e1 s t)
     }
 
 time =
@@ -71,7 +66,6 @@ aggregate f i s = foldr f i (toList s)
 
 mkEr :: (Multiset a -> Time -> b) -> ErF a b
 mkEr f = ErF { at = f }
-
 
 type Nm = String
 
@@ -125,7 +119,7 @@ getEsc (c:cs)
             else getIdent cs (acc ++ [c])
 
 rmEscChar :: String -> String
-rmEscChar cs = [c | c <- cs, not (c == '$')]
+rmEscChar cs = [c | c <- cs, c /= '$']
 
 mkExp :: String -> Exp
 mkExp s = case parseExp s of
@@ -139,7 +133,7 @@ hExpr = do
   Tok.symbol lexer "}"
   let nms = getEsc s
   case parseExp (rmEscChar s) of
-    Left err -> error (err)
+    Left err -> error err
     Right e -> return (HExpr nms e)
 
 parseEr :: Parser Er
@@ -176,26 +170,25 @@ obsExpr = do
 timeExpr :: Parser Er
 timeExpr = do
   op "time"
-  return $ Time
+  return Time
 
 parensExpr :: Parser Er
 parensExpr = do
   er <- Text.Parsec.between (Tok.symbol lexer "(") (Tok.symbol lexer ")") parseEr
   return er
 
-mkFApp = undefined
-
-tStmt = undefined
-
-tMExp = undefined
-
-tName = undefined
+mkFApp :: Name -> Exp
+mkFApp nm =
+    ParensE
+        (AppE
+             (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
+             (VarE $ mkName "t"))
 
 tExp :: Set Name -> Exp -> Exp
 tExp nms var@(VarE nm) =
     if Set.member nm nms
         then mkFApp nm
-        else var             
+        else var
 tExp nms (AppE e1 e2) = AppE (tExp nms e1) (tExp nms e2)
 tExp nms (TupE exps) = TupE (map (tExp nms) exps)
 tExp nms (ListE exps) = ListE (map (tExp nms) exps)
@@ -203,16 +196,26 @@ tExp nms (UInfixE e1 e2 e3) = UInfixE (tExp nms e1) (tExp nms e2) (tExp nms e3)
 tExp nms (ParensE e) = ParensE (tExp nms e)
 tExp nms (LamE pats e) = LamE pats (tExp nms e)
 tExp nms (CompE stmts) = CompE (map (tStmt nms) stmts)
+  where
+    tStmt nms (BindS p e) = BindS p (tExp nms e)
+    tStmt nms (NoBindS e) = NoBindS (tExp nms e)
 tExp nms (InfixE me1 e me2) =
-    InfixE (tMExp nms me1) (tExp nms e) (tMExp nms me2)
+    InfixE (fmap (tExp nms) me1) (tExp nms e) (fmap (tExp nms) me2)
 tExp nms (LitE lit) = LitE lit
 tExp nms (ConE nm) = ConE nm
-tExp nms (RecConE nm fexps) = RecConE nm (tFExp nms fexps)
+tExp nms (RecConE nm fexps) = RecConE nm (map (tFExp nms) fexps)
+  where
+    tFExp nms (nm, exp) = (nm, tExp nms exp)
 tExp nms _ = undefined
+
+mkLiftExp :: Set Name -> Exp -> Exp
+mkLiftExp nms body = LamE args (tExp nms body)
+  where
+    args = [VarP $ mkName "s", VarP $ mkName "t"]
 
 quoteEr :: Er -> Q Exp
 quoteEr Time = [| time |]
-quoteEr (HExpr nms e) = undefined
+quoteEr (HExpr nms e) = AppE (VarE $ mkName "mkEr") (mkLiftExp nms e)
 quoteEr (When er1 er2 er3) = undefined
 quoteEr (Repeat er1 er2) = undefined
 quoteEr (Obs nm er1 er2) = undefined
@@ -223,7 +226,7 @@ erQuoter = undefined
 
 
 ------------- testing
-contents = "repeatEvery {5} (when {$light + 1} {5} else {1})"
+contents = "repeatEvery {5} (when {$light$ + 1} {5} else {1})"
 
 go = case parse parseEr "er" contents of
   (Left err) -> error (show err)
