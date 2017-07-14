@@ -24,6 +24,7 @@ library
                       Chromar.Fluent
                       Chromar.Multiset
                       Chromar.MAttrs
+                      Chromar.MRuleParser
                       Chromar
    
   other-extensions:   BangPatterns

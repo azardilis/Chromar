@@ -7,7 +7,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Text.ParserCombinators.Parsec
 import Data.List
-import Chromar.RuleParser
+import Chromar.MRuleParser
 import Chromar.MAttrs
 
 type FieldProd = (FieldPat, [Exp], Set Name)
@@ -186,11 +186,26 @@ tFExp (nm, exp) = do
     te <- tExp exp
     return (nm, te)
 
+tBody :: Body -> Q Body
+tBody (NormalB exp) = do
+  te <- tExp exp
+  return (NormalB te)
+tBody _ = error "expected NormalB constr"
+
+tDec :: Dec -> Q Dec
+tDec (ValD p bd xs) = do
+  tbd <- tBody bd
+  return (ValD p tbd xs)
+tDec _ = error "expected ValD constr"
+
 tuplify :: Name -> Exp -> Exp -> Exp
 tuplify s lhs r = TupE [lhs, VarE s, r]
 
-mkRateExp :: Name -> Exp -> Exp -> Exp
-mkRateExp s lhs r = AppE (VarE $ mkName "fullRate") args
+tuplify2 :: Exp -> Exp -> Exp
+tuplify2 m ar = TupE [m, ar]
+
+mkActExp :: Name -> Exp -> Exp -> Exp
+mkActExp s lhs r = AppE (VarE $ mkName "fullRate") args
   where
     args = tuplify s lhs r
 
@@ -203,18 +218,30 @@ mkRxnExp s r = RecConE (mkName "Rxn") fields
     lhsSym = mkName "lhs"
     rhsSym = mkName "rhs"
     rateSym = mkName "rate"
+    actSym = mkName "act"
+    mrexps =
+        AppE
+            (VarE $ mkName "nrepl")
+            (tuplify2 (ListE $ mults r) (ListE $ rexps r))
     lexps' = AppE (VarE $ mkName "ms") (ListE $ lexps r)
-    rexps' = AppE (VarE $ mkName "ms") (ListE $ rexps r)
-    rateExp = mkRateExp s lexps' (srate r)
-    fields = [(lhsSym, lexps'), (rhsSym, rexps'), (rateSym, rateExp)]
+    rexps' = AppE (VarE $ mkName "ms") (ParensE mrexps)
+    rateExp = srate r
+    actExp = mkActExp s lexps' (srate r)
+    fields =
+        [ (lhsSym, lexps')
+        , (rhsSym, rexps')
+        , (rateSym, rateExp)
+        , (actSym, actExp)
+        ]
 
 mkCompStmts :: Name -> SRule -> Q [Stmt]
 mkCompStmts s r = do
     let rxnExp = mkRxnExp s r
     let retStmt = mkReturnStmt rxnExp
     let guardStmt = NoBindS (cond r)
+    let letStmt = LetS (decs r)
     patStmts <- mkLhs (lexps r)
-    return $ patStmts ++ [guardStmt, retStmt]
+    return $ patStmts ++ [letStmt, guardStmt, retStmt]
 
 ruleQuoter' :: SRule -> Q Exp
 ruleQuoter' r = do
@@ -226,17 +253,22 @@ ruleQuoter' r = do
 fluentTransform :: SRule -> Q SRule
 fluentTransform SRule {lexps = les
                       ,rexps = res
+                      ,mults = m         
                       ,srate = r
-                      ,cond = c} = do
+                      ,cond = c
+                      ,decs = ds} = do
     re <- tExp r
     ce <- tExp c
     tres <- mapM tExp res
+    tds <- mapM tDec ds
     return
         SRule
         { lexps = les
         , rexps = tres
+        , mults = m          
         , srate = re
         , cond = ce
+        , decs = tds         
         }
 
 ruleQuoter :: String -> Q Exp

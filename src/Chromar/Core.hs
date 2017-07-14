@@ -10,6 +10,7 @@ data Rxn a = Rxn
     { lhs :: Multiset a
     , rhs :: Multiset a
     , rate :: !Double
+    , act :: !Double  
     } deriving (Eq, Show)
 
 type Rule a = Multiset a -> Time -> [Rxn a]
@@ -48,6 +49,9 @@ fullRate
     => (Multiset a, Multiset a, Double) -> Double
 fullRate (m1, m2, br) = fromIntegral (mults m1 m2) * br
 
+nrepl :: ([Int], [a]) -> [a]
+nrepl (mults, elems) = concat [replicate m e | (m, e) <- zip mults elems]
+
 apply
     :: (Eq a)
     => Rxn a -> Multiset a -> Multiset a
@@ -60,12 +64,12 @@ selectRxn acc n (rxn:rxns)
     | n < acc' = rxn
     | otherwise = selectRxn acc' n rxns
   where
-    acc' = acc + (rate rxn)
+    acc' = acc + (act rxn)
 
 sample :: R.StdGen -> [Rxn a] -> (Rxn a, Double, R.StdGen)
 sample gen rxns = (selectRxn 0.0 b rxns, dt, g2)
   where
-    totalProp = sum $ map rate rxns
+    totalProp = sum $ map act rxns
     (a, g1) = R.randomR (0.0, 1.0) gen
     (b, g2) = R.randomR (0.0, totalProp) g1
     dt = log (1.0 / a) / totalProp
@@ -92,7 +96,7 @@ step
 step rules (gen, State mix t n) = (gen', State mix' (t + dt) (n + 1))
   where
     rxns = concatMap (\r -> r mix t) rules
-    actRxns = filter (\r -> rate r > 0.0) rxns
+    actRxns = filter (\r -> act r > 0.0) rxns
     (rxn, dt, gen') = sample gen actRxns
     mix' = apply rxn mix
 
