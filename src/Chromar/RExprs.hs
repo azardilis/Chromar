@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module RExprs where
+module Chromar.RExprs where
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
@@ -27,19 +27,19 @@ data ErF a b = ErF { at :: Multiset a -> Time -> b }
 zipEr2 :: ErF a b -> ErF a c -> ErF a (b, c)
 zipEr2 e1 e2 =
     ErF
-    { at = \s t -> (at e1 st, at e2 s t)
+    { at = \s t -> (at e1 s t, at e2 s t)
     }
 
 zipEr3 :: ErF a b -> ErF a c -> ErF a d -> ErF a (b, c, d)
 zipEr3 e1 e2 e3 =
     ErF
-    { at = \s t -> (at e1 st, at e2 s t, at e3 s t)
+    { at = \s t -> (at e1 s t, at e2 s t, at e3 s t)
     }
 
 zipEr4 :: ErF a b -> ErF a b1 -> ErF a b2 -> ErF a b3 -> ErF a (b, b1, b2, b3)
 zipEr4 e1 e2 e3 e4 =
     ErF
-    { at = \s t -> (at e1 st, at e2 s t, at e3 s t, at e4 s t)
+    { at = \s t -> (at e1 s t, at e2 s t, at e3 s t, at e4 s t)
     }
 
 zipEr5
@@ -51,7 +51,7 @@ zipEr5
     -> ErF a (b, b1, b2, b3, b4)
 zipEr5 e1 e2 e3 e4 e5 =
     ErF
-    { at = \s t -> (at e1 st, at e2 s t, at e3 s t, at e4 s t, at e5 s t)
+    { at = \s t -> (at e1 s t, at e2 s t, at e3 s t, at e4 s t, at e5 s t)
     }
 
 repeatEvery :: ErF a Time -> ErF a b -> ErF a b
@@ -81,12 +81,11 @@ time =
     { at = \s t -> t
     }
 
-obs :: (a -> Bool) -> (a -> b -> b) -> b -> ErF a b
+obs :: (a -> Bool) -> ErF a (a -> b -> b) -> ErF a b -> ErF a b
 obs f comb i =
     ErF
-    { at = \s t -> aggregate comb i . select f $ s
+    { at = \s t -> aggregate (at comb s t) (at i s t) . select f $ s
     }
-
 
 select :: (a -> Bool) -> Multiset a -> Multiset a
 select f = filter (\(el, _) -> f el)
@@ -168,8 +167,8 @@ hExpr = do
 
 parseEr :: Parser Er
 parseEr =
-    Tok.parens lexer whenExpr <|> repeatExpr <|> obsExpr <|> timeExpr <|> parensExpr <|>
-    hExpr
+    whenExpr <|> repeatExpr <|> obsExpr <|> timeExpr <|> parensExpr <|>
+    hExpr <|> spaceExpr
     
 whenExpr :: Parser Er
 whenExpr = do
@@ -207,39 +206,46 @@ parensExpr = do
     er <- Text.Parsec.between (Tok.symbol lexer "(") (Tok.symbol lexer ")") parseEr
     return er
 
-mkFApp :: Name -> Exp
-mkFApp nm =
+spaceExpr :: Parser Er
+spaceExpr = do
+  whiteSpace
+  er <- parseEr
+  whiteSpace
+  return er
+
+mkErApp :: Name -> Exp
+mkErApp nm =
     ParensE
         (AppE
              (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
              (VarE $ mkName "t"))
 
-tExp :: Set Name -> Exp -> Exp
-tExp nms var@(VarE nm) =
+lExp :: Set Name -> Exp -> Exp
+lExp nms var@(VarE nm) =
     if Set.member nm nms
-        then mkFApp nm
+        then mkErApp nm
         else var
-tExp nms (AppE e1 e2) = AppE (tExp nms e1) (tExp nms e2)
-tExp nms (TupE exps) = TupE (map (tExp nms) exps)
-tExp nms (ListE exps) = ListE (map (tExp nms) exps)
-tExp nms (UInfixE e1 e2 e3) = UInfixE (tExp nms e1) (tExp nms e2) (tExp nms e3)
-tExp nms (ParensE e) = ParensE (tExp nms e)
-tExp nms (LamE pats e) = LamE pats (tExp nms e)
-tExp nms (CompE stmts) = CompE (map (tStmt nms) stmts)
+lExp nms (AppE e1 e2) = AppE (lExp nms e1) (lExp nms e2)
+lExp nms (TupE exps) = TupE (map (lExp nms) exps)
+lExp nms (ListE exps) = ListE (map (lExp nms) exps)
+lExp nms (UInfixE e1 e2 e3) = UInfixE (lExp nms e1) (lExp nms e2) (lExp nms e3)
+lExp nms (ParensE e) = ParensE (lExp nms e)
+lExp nms (LamE pats e) = LamE pats (lExp nms e)
+lExp nms (CompE stmts) = CompE (map (tStmt nms) stmts)
   where
-    tStmt nms (BindS p e) = BindS p (tExp nms e)
-    tStmt nms (NoBindS e) = NoBindS (tExp nms e)
-tExp nms (InfixE me1 e me2) =
-    InfixE (fmap (tExp nms) me1) (tExp nms e) (fmap (tExp nms) me2)
-tExp nms (LitE lit) = LitE lit
-tExp nms (ConE nm) = ConE nm
-tExp nms (RecConE nm fexps) = RecConE nm (map (tFExp nms) fexps)
+    tStmt nms (BindS p e) = BindS p (lExp nms e)
+    tStmt nms (NoBindS e) = NoBindS (lExp nms e)
+lExp nms (InfixE me1 e me2) =
+    InfixE (fmap (lExp nms) me1) (lExp nms e) (fmap (lExp nms) me2)
+lExp nms (LitE lit) = LitE lit
+lExp nms (ConE nm) = ConE nm
+lExp nms (RecConE nm fexps) = RecConE nm (map (tFExp nms) fexps)
   where
-    tFExp nms (nm, exp) = (nm, tExp nms exp)
-tExp nms _ = undefined
+    tFExp nms (nm, exp) = (nm, lExp nms exp)
+lExp nms _ = undefined
 
 mkLiftExp :: Set Name -> Exp -> Exp
-mkLiftExp nms body = LamE args (tExp nms body)
+mkLiftExp nms body = LamE args (lExp nms body)
   where
     args = [VarP $ mkName "s", VarP $ mkName "t"]
 
