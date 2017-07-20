@@ -20,7 +20,7 @@ library
   hs-source-dirs:     src
 
   exposed-modules:    Chromar.Core
-                      Chromar.RuleQuotes
+                      Chromar.RuleQuotesE
                       Chromar.Fluent
                       Chromar.Observables
                       Chromar.Multiset
