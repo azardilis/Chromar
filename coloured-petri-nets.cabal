@@ -15,7 +15,11 @@ library
                       haskell-src-meta >= 0.6,
                       containers >=0.5,
                       multiset >= 0.3,
-                      bifunctors		      
+                      bifunctors,
+                      sexp,
+                      haskell-src-exts,
+                      word8
+		       
   ghc-options:	      -O2
 		 
   hs-source-dirs:     src
