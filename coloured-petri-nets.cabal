@@ -14,7 +14,8 @@ library
                       template-haskell >=2.10 && <2.12,
                       haskell-src-meta >= 0.6,
                       containers >=0.5,
-                      multiset >= 0.3
+                      multiset >= 0.3,
+                      bifunctors		      
   ghc-options:	      -O2
 		 
   hs-source-dirs:     src
