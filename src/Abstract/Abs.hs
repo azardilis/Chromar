@@ -9,6 +9,12 @@ import Language.Sexp.Printer
 import Data.Ratio
 import Data.Word8
 import Language.Haskell.Meta.Parse
+import Chromar.MRuleParser
+import Language.Haskell.Meta.Syntax.Translate
+import Text.Parsec
+import Language.Haskell.Exts (parseFile)
+import Language.Haskell.Exts.Parser (ParseResult(..))
+import qualified Language.Haskell.Exts.Syntax as E
 import qualified Language.Haskell.TH.Syntax as H
 
 type Nm = String
@@ -21,7 +27,7 @@ type Multiset a = [(a, Int)]
 
 data AgentType t =
     AgentType Nm
-              [(AttrName, t)] deriving Generic
+              [(AttrName, t)] deriving (Generic, Show)
                                        
 instance (Sexpable t) => Sexpable (AgentType t)
 
@@ -34,7 +40,7 @@ instance Functor AgentType where
 
 data RAgent e =
     RAgent Nm
-           [(AttrName, e)] deriving Generic
+           [(AttrName, e)] deriving (Generic, Show)
 
 instance (Sexpable e) => Sexpable (RAgent e) 
 
@@ -47,7 +53,7 @@ instance Functor RAgent where
 
 data LAgent =
     LAgent Nm
-           [(AttrName, Var)] deriving Generic
+           [(AttrName, Var)] deriving (Generic, Show)
 
 instance Sexpable LAgent
 
@@ -56,7 +62,7 @@ data ARule e = Rule
     , rhs :: [RAgent e]
     , rexpr :: e
     , cexpr :: e
-    } deriving Generic
+    } deriving (Generic, Show)
 
 instance (Sexpable e) => Sexpable (ARule e)
 
@@ -78,7 +84,7 @@ data Chromar e t = Chromar
     { agentDecls :: [AgentType t]
     , iState :: Multiset (RAgent e)
     , rules :: [ARule e]
-    } deriving Generic
+    } deriving (Generic, Show)
 
 instance (Sexpable e, Sexpable t) => Sexpable (Chromar e t)
 
@@ -203,16 +209,79 @@ m = Chromar { agentDecls = [adecl],
               iState = [(RAgent "A" [("x", parseE "1")], 1)],
               rules = [arule] }
 
-go = printHum (toSexp m)
+{-
+a filepath containing a Chromar(H.E, H.T) model in Haskell surface syntax to an abstract representation
+-}
+fromMod :: FilePath -> IO (Chromar H.Exp H.Type)
+fromMod fn = do
+  res <- parseFile fn
+  case res of
+    (ParseOk m) -> return $ getAbsChromar m
+    (ParseFailed l s) -> error ""
 
+toSexpMod :: FilePath -> FilePath -> IO ()
+toSexpMod fin fout = undefined
 
--- instance Sexpable H.Lit where
---   toSexp (H.CharL c) = toSexp c
---   toSexp (H.StringL s) = toSexp s
---   toSexp (H.IntegerL i) = toSexp i
---   toSexp (H.RationalL r) = List [toSexp $ numerator r, toSexp $ denominator r]
---   toSexp (H.IntPrimL i) = toSexp i
---   toSexp (H.WordPrimL i) = toSexp i
---   toSexp (H.FloatPrimL r) = List [toSexp $ numerator r, toSexp $ denominator r]
---   toSexp (H.DoublePrimL r) = List [toSexp $ numerator r, toSexp $ denominator r]
---   toSexp (H.StringPrimL words) = undefined
+getAbsChromar :: E.Module -> Chromar H.Exp H.Type
+getAbsChromar (E.Module _ _ _ _ _ _ decs) =
+    Chromar
+    { agentDecls = concatMap getATypes decs
+    , iState = [] -- to implement (see getIState)
+    , rules = concatMap getRules decs
+    }
+
+getRules :: E.Decl -> [ARule H.Exp]
+getRules (E.PatBind _ (E.PVar (E.Ident nm)) (E.UnGuardedRhs e) _) = goRule e
+  where
+    goRule (E.QuasiQuote quoter r)
+      | quoter == "rule" = [parseARule r]
+      | otherwise = []
+    goRule _ = []
+getRules _ = []
+                                              
+getATypes :: E.Decl -> [AgentType H.Type]
+getATypes (E.DataDecl _ E.DataType _ (E.Ident nm) _ constrs _) = map getAT constrs
+getATypes _ = []
+
+getAT :: E.QualConDecl -> AgentType H.Type
+getAT (E.QualConDecl _ _ _ (E.RecDecl (E.Ident nm) attrs)) = AgentType nm (map goAttr attrs)
+  where
+    goAttr ([E.Ident nm], t) = (nm, toType t)
+    goAttr _ = undefined
+getAT _ = undefined
+
+getIState :: E.Decl -> [Multiset (RAgent H.Exp)]
+getIState = undefined
+
+toAbsLAgent :: H.Exp -> [LAgent]
+toAbsLAgent (H.RecConE nm fexps) = [LAgent (show nm) (concatMap goFExp fexps)]
+  where
+    goFExp (fnm, H.VarE v) = [(show fnm, show v)]
+    goFExp _ = []
+toAbsLAgent _ = []
+
+toAbsRAgent :: H.Exp -> [RAgent H.Exp]
+toAbsRAgent (H.RecConE nm fexps) = [RAgent (show nm) (map goFExp fexps)]
+  where
+    goFExp (fnm, e) = (show fnm, e)
+toAbsRAgent _ = []
+
+mkAbsRule :: SRule -> ARule H.Exp
+mkAbsRule (SRule {lexps = les
+                 ,rexps = res
+                 ,mults = _
+                 ,srate = re
+                 ,cond = ce
+                 ,decs = _}) =
+    Rule
+    { lhs = concatMap toAbsLAgent les
+    , rhs = concatMap toAbsRAgent res
+    , rexpr = re
+    , cexpr = ce
+    }
+
+parseARule :: String -> ARule H.Exp
+parseARule s = case parse parseRule "rule" s of
+  (Left err) -> error (show err)
+  (Right sr) -> mkAbsRule sr
+
