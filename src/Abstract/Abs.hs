@@ -240,7 +240,9 @@ getRules (E.PatBind _ (E.PVar (E.Ident nm)) (E.UnGuardedRhs e) _) = goRule e
 getRules _ = []
                                               
 getATypes :: E.Decl -> [AgentType H.Type]
-getATypes (E.DataDecl _ E.DataType _ (E.Ident nm) _ constrs _) = map getAT constrs
+getATypes (E.DataDecl _ E.DataType _ (E.Ident nm) _ constrs _)
+  | nm == "Agent" = map getAT constrs
+  | otherwise = []                  
 getATypes _ = []
 
 getAT :: E.QualConDecl -> AgentType H.Type
