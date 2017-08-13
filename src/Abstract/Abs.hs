@@ -27,7 +27,8 @@ type Multiset a = [(a, Int)]
 
 data AgentType t =
     AgentType Nm
-              [(AttrName, t)] deriving (Generic, Show)
+              [(AttrName, t)]
+    deriving (Generic, Show)
                                        
 instance (Sexpable t) => Sexpable (AgentType t)
 
@@ -40,7 +41,8 @@ instance Functor AgentType where
 
 data RAgent e =
     RAgent Nm
-           [(AttrName, e)] deriving (Generic, Show)
+           [(AttrName, e)]
+    deriving (Generic, Show)
 
 instance (Sexpable e) => Sexpable (RAgent e) 
 
