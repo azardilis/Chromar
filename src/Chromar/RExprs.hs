@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Chromar.RExprs where
 
 import Language.Haskell.TH
@@ -107,7 +105,8 @@ data Er
            Er
     | Repeat Er
              Er
-    | Obs Nm
+    | Obs Pat
+          Nm
           Er
           Er
     deriving (Show)
@@ -133,6 +132,23 @@ squares = Tok.squares lexer
 
 whiteSpace = Tok.whiteSpace lexer
 
+attr :: Parser String
+attr = do
+  attrNm <- name
+  op "="
+  expr <- many1 (noneOf ['}', ','])
+  return (attrNm ++ "=" ++ expr)
+
+lagent :: Parser String
+lagent = do
+  agentNm <- name
+  attrs <- braces (commaSep attr)
+  return (agentNm ++ "{" ++ intercalate "," attrs ++ "}")
+
+parseP :: String -> Pat
+parseP s = case parsePat s of
+  Left err -> error err
+  Right p -> p
 
 getEsc :: String -> Set Name
 getEsc "" = Set.empty
@@ -169,7 +185,7 @@ parseEr :: Parser Er
 parseEr =
     whenExpr <|> repeatExpr <|> obsExpr <|> timeExpr <|> parensExpr <|>
     hExpr <|> spaceExpr
-    
+
 whenExpr :: Parser Er
 whenExpr = do
   op "when"
@@ -189,12 +205,15 @@ repeatExpr = do
 obsExpr :: Parser Er
 obsExpr = do
   op "select"
-  nm <- Tok.identifier lexer
+  lat <- lagent
   op ";"
   op "aggregate"
+  nm <- Text.Parsec.between (Tok.symbol lexer "(") (Tok.symbol lexer ")") (Tok.identifier lexer)
+  Tok.symbol lexer "."
   er1 <- parseEr
+  Tok.symbol lexer ","
   er2 <- parseEr
-  return $ Obs nm er1 er2
+  return $ Obs (parseP lat) nm er1 er2
 
 timeExpr :: Parser Er
 timeExpr = do
@@ -219,6 +238,13 @@ mkErApp nm =
         (AppE
              (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
              (VarE $ mkName "t"))
+
+--- given a record pat
+mkSelect :: Pat -> Exp
+mkSelect pat = CompE [bindStmt, retStmt]
+  where
+    bindStmt = BindS (AsP (mkName "el") pat) (AppE (VarE $ mkName "toList") (VarE $ mkName "s"))
+    retStmt = NoBindS (VarE $ mkName "el")
 
 lExp :: Set Name -> Exp -> Exp
 lExp nms var@(VarE nm) =
@@ -268,7 +294,7 @@ quoteEr Time = VarE $ mkName "time"
 quoteEr (HExpr nms e) = AppE (VarE $ mkName "mkEr") (mkLiftExp nms e)
 quoteEr (When er1 er2 er3) = mkWhenExp (quoteEr er1) (quoteEr er2) (quoteEr er3)
 quoteEr (Repeat er1 er2) = mkRepeatExp (quoteEr er1) (quoteEr er2)
-quoteEr (Obs nm er1 er2) = mkObsExp nm (quoteEr er1) (quoteEr er2)
+quoteEr (Obs lat nm er1 er2) = undefined ---mkObsExp nm (quoteEr er1) (quoteEr er2)
 
 erQuoter :: String -> Q Exp
 erQuoter s = case parse parseEr "er" s of
@@ -288,6 +314,8 @@ er =
 ------------- testing
 contents = "repeatEvery {5} (when {$light$ + 1} {5} else {1})"
 
-go = case parse parseEr "er" contents of
+contents' = "select Leaf{m=m}; aggregate(count).{count + m}, {0}"
+
+go = case parse parseEr "er" contents' of
   (Left err) -> error (show err)
   (Right val) -> val
