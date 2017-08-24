@@ -22,6 +22,11 @@ import Chromar.Core
 
 data ErF a b = ErF { at :: Multiset a -> Time -> b }
 
+mmod :: Real a => a -> a -> a
+mmod n m
+  | m <=0 = 0
+  | otherwise = mod' n m          
+
 zipEr2 :: ErF a b -> ErF a c -> ErF a (b, c)
 zipEr2 e1 e2 =
     ErF
@@ -55,7 +60,7 @@ zipEr5 e1 e2 e3 e4 e5 =
 repeatEvery :: ErF a Time -> ErF a b -> ErF a b
 repeatEvery et er =
     ErF
-    { at = \s t -> at er s (mod' t (at et s t))
+    { at = \s t -> at er s (mmod t (at et s t))
     }
 
 when :: ErF a Bool -> ErF a b -> ErF a (Maybe b)
@@ -114,7 +119,8 @@ data Er
 langDef =
     emptyDef
     { Tok.reservedOpNames = ["$"]
-    , Tok.reservedNames = ["repeatEvery", "when", "else", "select", "aggregate", "time"]
+    , Tok.reservedNames =
+        ["repeatEvery", "when", "else", "select", "aggregate", "time"]
     }
 
 lexer :: Tok.TokenParser ()
@@ -204,16 +210,20 @@ repeatExpr = do
 
 obsExpr :: Parser Er
 obsExpr = do
-  op "select"
-  lat <- lagent
-  op ";"
-  op "aggregate"
-  nm <- Text.Parsec.between (Tok.symbol lexer "(") (Tok.symbol lexer ")") (Tok.identifier lexer)
-  Tok.symbol lexer "."
-  er1 <- parseEr
-  Tok.symbol lexer ","
-  er2 <- parseEr
-  return $ Obs (parseP lat) nm er1 er2
+    op "select"
+    lat <- lagent
+    op ";"
+    op "aggregate"
+    nm <-
+        Text.Parsec.between
+            (Tok.symbol lexer "(")
+            (Tok.symbol lexer ")")
+            (Tok.identifier lexer)
+    Tok.symbol lexer "."
+    er1 <- parseEr
+    Tok.symbol lexer ","
+    er2 <- parseEr
+    return $ Obs (parseP lat) nm er1 er2
 
 timeExpr :: Parser Er
 timeExpr = do
@@ -239,12 +249,37 @@ mkErApp nm =
              (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
              (VarE $ mkName "t"))
 
---- given a record pat
+mkErApp' :: Exp -> Exp
+mkErApp' e =
+    ParensE
+        (AppE
+             (AppE (AppE (VarE $ mkName "at") e) (VarE $ mkName "s"))
+             (VarE $ mkName "t"))
+
+{-
+    takes function and args and returns the expression for
+   function application to the args
+-}
+mkFApp :: Exp -> [Exp] -> Exp
+mkFApp f [] = undefined
+mkFApp f (e:exps) = foldr (\x acc -> AppE acc x) (AppE f e) (reverse exps)
+
 mkSelect :: Pat -> Exp
 mkSelect pat = CompE [bindStmt, retStmt]
   where
-    bindStmt = BindS (AsP (mkName "el") pat) (AppE (VarE $ mkName "toList") (VarE $ mkName "s"))
+    bindStmt =
+        BindS
+            (AsP (mkName "el") pat)
+            (AppE (VarE $ mkName "toList") (VarE $ mkName "s"))
     retStmt = NoBindS (VarE $ mkName "el")
+
+stPat = VarP $ mkName "s"
+
+stExp = VarE $ mkName "s"
+
+timePat = VarP $ mkName "t"
+
+timeExp = VarE $ mkName "t"
 
 lExp :: Set Name -> Exp -> Exp
 lExp nms var@(VarE nm) =
@@ -283,18 +318,39 @@ mkWhenExp eb e1 e2 = AppE (AppE (VarE $ mkName "orElse") whenE) e2
 mkRepeatExp :: Exp -> Exp -> Exp
 mkRepeatExp et e = AppE (AppE (VarE $ mkName "repeatEvery") et) e
 
-mkObsExp :: Nm -> Exp -> Exp -> Exp
-mkObsExp nm combE initE = AppE (AppE selectE combE) initE
+mkFoldF :: Pat -> Nm -> Exp -> Dec
+mkFoldF pat nm combE = FunD (mkName "go") [emptyClause, nonemptyClause]
   where
-    selF = "is" ++ nm
-    selectE = AppE (VarE $ mkName "obs") (VarE $ mkName selF)
+    accPat = VarP $ mkName nm
+    consPat = ParensP (UInfixP pat (mkName ":") (VarP $ mkName "as"))
+    recGo =
+        mkFApp
+            (VarE $ mkName "go")
+            [VarE $ mkName "as", mkErApp' combE, stExp, timeExp]
+    emptyClause =
+        Clause
+            [ListP [], VarP $ mkName nm, VarP $ mkName "s", VarP $ mkName "t"]
+            (NormalB (VarE $ mkName nm))
+            []
+    nonemptyClause = Clause [consPat, accPat, stPat, timePat] (NormalB recGo) []
+
+mkObsExp' :: Pat -> Nm -> Exp -> Exp -> Exp
+mkObsExp' pat nm combE initE = AppE (VarE $ mkName "mkEr") (LetE decs e)
+  where
+    decs = [mkFoldF pat nm combE]
+    e =
+        LamE
+            [stPat, timePat]
+            (mkFApp
+                 (VarE $ mkName "go")
+                 [mkSelect pat, mkErApp' initE, stExp, timeExp])
 
 quoteEr :: Er -> Exp
 quoteEr Time = VarE $ mkName "time"
 quoteEr (HExpr nms e) = AppE (VarE $ mkName "mkEr") (mkLiftExp nms e)
 quoteEr (When er1 er2 er3) = mkWhenExp (quoteEr er1) (quoteEr er2) (quoteEr er3)
 quoteEr (Repeat er1 er2) = mkRepeatExp (quoteEr er1) (quoteEr er2)
-quoteEr (Obs lat nm er1 er2) = undefined ---mkObsExp nm (quoteEr er1) (quoteEr er2)
+quoteEr (Obs lat nm er1 er2) = mkObsExp' lat nm (quoteEr er1) (quoteEr er2)
 
 erQuoter :: String -> Q Exp
 erQuoter s = case parse parseEr "er" s of
