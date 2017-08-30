@@ -101,19 +101,19 @@ mkEr f = ErF { at = f }
 
 type Nm = String
 
-data Er
-    = HExpr (Set Name)
-            Exp
+data Er e
+    = XExpr (Set Name)
+            e
     | Time
-    | When Er
-           Er
-           Er
-    | Repeat Er
-             Er
+    | When (Er e)
+           (Er e)
+           (Er e)
+    | Repeat (Er e)
+             (Er e)
     | Obs Pat
           Nm
-          Er
-          Er
+          (Er e)
+          (Er e)
     deriving (Show)
 
 langDef =
@@ -177,39 +177,40 @@ mkExp s = case parseExp s of
   (Left err) -> error err
   (Right e) -> e
 
-hExpr :: Parser Er
-hExpr = do
+hExpr :: (String -> e) -> Parser (Er e)
+hExpr f = do
   Tok.symbol lexer "{"
   s <- many1 (noneOf ['}'])
   Tok.symbol lexer "}"
   let nms = getEsc s
-  case parseExp (rmEscChar s) of
-    Left err -> error err
-    Right e -> return (HExpr nms e)
+  return $ XExpr nms (f $ rmEscChar s)
+  -- case (f $ rmEscChar s) of
+  --   Left err -> error err
+  --   Right e -> return (XExpr nms e)
 
-parseEr :: Parser Er
-parseEr =
-    whenExpr <|> repeatExpr <|> obsExpr <|> timeExpr <|> parensExpr <|>
-    hExpr <|> spaceExpr
+parseEr :: (String -> e) -> Parser (Er e)
+parseEr f =
+    (whenExpr f) <|> (repeatExpr f) <|> (obsExpr f) <|> timeExpr <|> (parensExpr f) <|>
+    (hExpr f) <|> (spaceExpr f)
 
-whenExpr :: Parser Er
-whenExpr = do
+whenExpr :: (String -> e) -> Parser (Er e)
+whenExpr f = do
   op "when"
-  er1 <- parseEr
-  er2 <- parseEr
+  er1 <- parseEr f
+  er2 <- parseEr f
   op "else"
-  er3 <- parseEr
+  er3 <- parseEr f
   return $ When er1 er2 er3
 
-repeatExpr :: Parser Er
-repeatExpr = do
+repeatExpr :: (String -> e) -> Parser (Er e)
+repeatExpr f = do
   op "repeatEvery"
-  er1 <- parseEr
-  er2 <- parseEr
+  er1 <- parseEr f
+  er2 <- parseEr f
   return $ Repeat er1 er2
 
-obsExpr :: Parser Er
-obsExpr = do
+obsExpr :: (String -> e) -> Parser (Er e)
+obsExpr f = do
     op "select"
     lat <- lagent
     op ";"
@@ -220,25 +221,25 @@ obsExpr = do
             (Tok.symbol lexer ")")
             (Tok.identifier lexer)
     Tok.symbol lexer "."
-    er1 <- parseEr
+    er1 <- parseEr f
     Tok.symbol lexer ","
-    er2 <- parseEr
+    er2 <- parseEr f
     return $ Obs (parseP lat) nm er1 er2
 
-timeExpr :: Parser Er
+timeExpr :: Parser (Er e)
 timeExpr = do
   op "time"
   return Time
 
-parensExpr :: Parser Er
-parensExpr = do
-    er <- Text.Parsec.between (Tok.symbol lexer "(") (Tok.symbol lexer ")") parseEr
+parensExpr :: (String -> e) -> Parser (Er e)
+parensExpr f = do
+    er <- Text.Parsec.between (Tok.symbol lexer "(") (Tok.symbol lexer ")") (parseEr f)
     return er
 
-spaceExpr :: Parser Er
-spaceExpr = do
+spaceExpr :: (String -> e) -> Parser (Er e)
+spaceExpr f = do
   whiteSpace
-  er <- parseEr
+  er <- parseEr f
   whiteSpace
   return er
 
@@ -345,15 +346,15 @@ mkObsExp' pat nm combE initE = AppE (VarE $ mkName "mkEr") (LetE decs e)
                  (VarE $ mkName "go")
                  [mkSelect pat, mkErApp' initE, stExp, timeExp])
 
-quoteEr :: Er -> Exp
+quoteEr :: Er Exp -> Exp
 quoteEr Time = VarE $ mkName "time"
-quoteEr (HExpr nms e) = AppE (VarE $ mkName "mkEr") (mkLiftExp nms e)
+quoteEr (XExpr nms e) = AppE (VarE $ mkName "mkEr") (mkLiftExp nms e)
 quoteEr (When er1 er2 er3) = mkWhenExp (quoteEr er1) (quoteEr er2) (quoteEr er3)
 quoteEr (Repeat er1 er2) = mkRepeatExp (quoteEr er1) (quoteEr er2)
 quoteEr (Obs lat nm er1 er2) = mkObsExp' lat nm (quoteEr er1) (quoteEr er2)
 
 erQuoter :: String -> Q Exp
-erQuoter s = case parse parseEr "er" s of
+erQuoter s = case parse (parseEr mkExp) "er" s of
   Left err -> error (show err)
   Right e -> return $ quoteEr e
 ---- parse the quote into Er then create the functions per the semantics
@@ -372,6 +373,11 @@ contents = "repeatEvery {5} (when {$light$ + 1} {5} else {1})"
 
 contents' = "select Leaf{m=m}; aggregate(count).{count + m}, {0}"
 
-go = case parse parseEr "er" contents' of
+go = case parse (parseEr mkExp) "er" contents' of
+  (Left err) -> error (show err)
+  (Right val) -> val
+
+parseErString :: String -> Er Exp
+parseErString s = case parse (parseEr mkExp) "er" s of
   (Left err) -> error (show err)
   (Right val) -> val
