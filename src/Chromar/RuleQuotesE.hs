@@ -12,6 +12,22 @@ import Chromar.MAttrs
 
 type FieldProd = (FieldPat, [Exp], Set Name)
 
+data SRule = SRule
+    { lexps :: [Exp]
+    , rexps :: [Exp]
+    , mults :: [Exp]
+    , srate :: Exp
+    , cond :: Exp
+    , decs :: [Dec]  
+    } deriving (Show)
+
+
+{- haskellify the Chromar rule parts
+   left agent exprs become Haskell record exprs etc.
+-}
+translate :: ARule Exp -> SRule
+translate = undefined
+
 rule :: QuasiQuoter
 rule =
     QuasiQuoter
