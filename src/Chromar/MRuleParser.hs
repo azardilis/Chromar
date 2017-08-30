@@ -10,14 +10,25 @@ import Text.Parsec.Token (makeTokenParser)
 
 import qualified Text.Parsec.Token as Tok
 
-data SRule = SRule
-    { lexps :: [Exp]
-    , rexps :: [Exp]
-    , mults :: [Exp]
-    , srate :: Exp
-    , cond :: Exp
-    , decs :: [Dec]  
+import qualified Chromar.RExprs as RE
+
+
+data RAgent e =
+    RAgent Nm
+           [(AttrName, e)]
+    deriving (Show)
+
+data LAgent =
+    LAgent Nm
+           [(AttrName, Var)] deriving (Show)
+
+data ARule e = Rule
+    { lhs :: [LAgent]
+    , rhs :: [RAgent e]
+    , rexpr :: e
+    , cexpr :: e
     } deriving (Show)
+
 
 langDef =
     emptyDef
@@ -99,7 +110,7 @@ createExps exps =
         Left s -> error s
         Right pexps -> pexps
 
-parseRule :: Parser SRule
+parseRule :: Parser (ARule Exp)
 parseRule = do
     whiteSpace
     lhs <- lhsParser
@@ -108,20 +119,20 @@ parseRule = do
     let (multExps, ragentExps) = unzip rhs
     op "@"
     rexpr <- many1 (noneOf ['['])
-    cexpr <- option "True" (squares (many1 (noneOf [']'])))
+    cexpr <- option "{True}" (squares (many1 (noneOf [']'])))
     wdecs <- option [] whereParser
     return 
         SRule
         { lexps = createExps lhs
         , rexps = createExps ragentExps
         , mults = createExps multExps
-        , srate = createExp rexpr
-        , cond = createExp cexpr
+        , srate = RE.mkErApp' (RE.quoteEr $ RE.parseErString rexpr)
+        , cond = RE.mkErApp' (RE.quoteEr $ RE.parseErString cexpr)
         , decs = wdecs         
         }
 
 --- for testing
-contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> {2} A{x=f x} @1.0 [x + 1 + 5] where a=1, b=2"
+contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> A{x=f x} @{1 + 2} [{True}]"
 
 go = case parse parseRule "rule" contents of
   (Left err) -> error (show err)
