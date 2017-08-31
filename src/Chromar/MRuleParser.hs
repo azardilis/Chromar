@@ -12,6 +12,9 @@ import qualified Text.Parsec.Token as Tok
 
 import qualified Chromar.RExprs as RE
 
+type Var = String
+type AttrName = String
+type Nm = String
 
 data RAgent e =
     RAgent Nm
@@ -19,16 +22,16 @@ data RAgent e =
     deriving (Show)
 
 data LAgent =
-    LAgent Nm
+    LAgent RE.Nm
            [(AttrName, Var)] deriving (Show)
 
 data ARule e = Rule
     { lhs :: [LAgent]
     , rhs :: [RAgent e]
-    , rexpr :: e
-    , cexpr :: e
+    , mults :: [e]  
+    , rexpr :: RE.Er e
+    , cexpr :: RE.Er e
     } deriving (Show)
-
 
 langDef =
     emptyDef
@@ -51,33 +54,40 @@ squares = Tok.squares lexer
 
 whiteSpace = Tok.whiteSpace lexer
 
-attr :: Parser String
-attr = do
+lattr :: Parser (AttrName, Var)
+lattr = do
   attrNm <- name
   op "="
-  expr <- many1 (noneOf ['}', ','])
-  return (attrNm ++ "=" ++ expr)
+  v <- many1 (noneOf ['}', ','])
+  return $ (attrNm, v)
 
-lagent :: Parser String
+rattr :: Parser (AttrName, Exp)
+rattr = do
+  attrNm <- name
+  op "="
+  es <- many1 (noneOf ['}', ','])
+  return $ (attrNm, RE.mkExp es)
+
+lagent :: Parser LAgent
 lagent = do
   agentNm <- name
-  attrs <- braces (commaSep attr)
-  return (agentNm ++ "{" ++ intercalate "," attrs ++ "}")
+  attrs <- braces (commaSep lattr)
+  return  $ LAgent agentNm attrs
 
 mult :: Parser String
 mult = braces (many1 (noneOf ['}']))
 
-ragent :: Parser (String, String)
+ragent :: Parser (Exp, RAgent Exp)
 ragent = do
   m <- option "1" mult
   agentNm <- name
-  attrs <- braces (commaSep attr)
-  return (m, agentNm ++ "{" ++ intercalate "," attrs ++ "}")
+  attrs <- braces (commaSep rattr)
+  return (RE.mkExp m, RAgent agentNm attrs)
 
-lhsParser :: Parser [String]
+lhsParser :: Parser [LAgent]
 lhsParser = commaSep lagent
 
-rhsParser :: Parser [(String, String)]
+rhsParser :: Parser [(Exp, RAgent Exp)]
 rhsParser = commaSep ragent
 
 dec :: Parser (String, String)
@@ -116,19 +126,17 @@ parseRule = do
     lhs <- lhsParser
     op "-->"
     rhs <- rhsParser
-    let (multExps, ragentExps) = unzip rhs
+    let (mults, ragents) = unzip rhs
     op "@"
     rexpr <- many1 (noneOf ['['])
     cexpr <- option "{True}" (squares (many1 (noneOf [']'])))
-    wdecs <- option [] whereParser
     return 
-        SRule
-        { lexps = createExps lhs
-        , rexps = createExps ragentExps
-        , mults = createExps multExps
-        , srate = RE.mkErApp' (RE.quoteEr $ RE.parseErString rexpr)
-        , cond = RE.mkErApp' (RE.quoteEr $ RE.parseErString cexpr)
-        , decs = wdecs         
+        Rule
+        { lhs = lhs
+        , rhs = ragents
+        , mults = mults
+        , rexpr = RE.parseErString rexpr
+        , cexpr = RE.parseErString cexpr
         }
 
 --- for testing
