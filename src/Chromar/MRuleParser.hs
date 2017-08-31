@@ -18,7 +18,7 @@ type Nm = String
 
 data RAgent e =
     RAgent Nm
-           [(AttrName, e)]
+           [(AttrName, RE.Er e)]
     deriving (Show)
 
 data LAgent =
@@ -69,12 +69,12 @@ lattr = do
   v <- many1 (noneOf ['}', ','])
   return $ (attrNm, v)
 
-rattr :: Parser (AttrName, Exp)
+rattr :: Parser (AttrName, RE.Er Exp)
 rattr = do
   attrNm <- name
   op "="
   es <- many1 (noneOf ['}', ','])
-  return $ (attrNm, RE.mkExp es)
+  return $ (attrNm, RE.parseErString es)
 
 lagent :: Parser LAgent
 lagent = do
@@ -148,7 +148,7 @@ parseRule = do
         }
 
 --- for testing
-contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> A{x=f x} @{1 + 2} [{True}]"
+contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> A{x='$f$ x', y={x}} @{1 + 2} [{True}]"
 
 go = case parse parseRule "rule" contents of
   (Left err) -> error (show err)

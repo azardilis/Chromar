@@ -14,15 +14,15 @@ import qualified Chromar.RExprs as RE
 
 type FieldProd = (FieldPat, [Exp], Set Name)
 
---RecConE Name [FieldExp]
--- type FieldExp = (Name, Exp) 
 tLAgent :: LAgent -> Exp
 tLAgent (LAgent nm attrs) =
     RecConE (mkName nm) (map (\(aNm, v) -> (mkName aNm, VarE $ mkName v)) attrs)
 
 tRAgent :: RAgent Exp -> Exp
 tRAgent (RAgent nm attrs) =
-    RecConE (mkName nm) (map (\(aNm, e) -> (mkName aNm, e)) attrs)
+    RecConE
+        (mkName nm)
+        (map (\(aNm, e) -> (mkName aNm, RE.mkErApp' . RE.quoteEr $ e)) attrs)
 
 tRateE :: RE.Er Exp -> Exp
 tRateE = RE.mkErApp' . RE.quoteEr 
@@ -277,7 +277,6 @@ fluentTransform SRule {lexps = les
     re <- tExp r
     ce <- tExp c
     tres <- mapM tExp res
---    tds <- mapM tDec ds
     return
         SRule
         { lexps = les

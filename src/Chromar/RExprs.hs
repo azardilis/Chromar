@@ -179,9 +179,9 @@ mkExp s = case parseExp s of
 
 hExpr :: (String -> e) -> Parser (Er e)
 hExpr f = do
-  Tok.symbol lexer "{"
-  s <- many1 (noneOf ['}'])
-  Tok.symbol lexer "}"
+  Tok.symbol lexer "'"
+  s <- many1 (noneOf ['\''])
+  Tok.symbol lexer "\'"
   let nms = getEsc s
   return $ XExpr nms (f $ rmEscChar s)
   -- case (f $ rmEscChar s) of
@@ -369,9 +369,9 @@ er =
     }
 
 ------------- testing
-contents = "repeatEvery {5} (when {$light$ + 1} {5} else {1})"
+contents = "repeatEvery '5' (when '$light$ + 1' '5' else '1')"
 
-contents' = "select Leaf{m=m}; aggregate(count).{count + m}, {0}"
+contents' = "select Leaf{m=m}; aggregate(count).'count + m', '0'"
 
 go = case parse (parseEr mkExp) "er" contents' of
   (Left err) -> error (show err)
