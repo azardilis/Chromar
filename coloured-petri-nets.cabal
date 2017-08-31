@@ -21,8 +21,6 @@ library
 
   exposed-modules:    Chromar.Core
                       Chromar.RuleQuotesE
-                      Chromar.Fluent
-                      Chromar.Observables
                       Chromar.Multiset
                       Chromar.MAttrs
                       Chromar.MRuleParser
