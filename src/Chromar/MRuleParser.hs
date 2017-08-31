@@ -26,11 +26,19 @@ data LAgent =
            [(AttrName, Var)] deriving (Show)
 
 data ARule e = Rule
-    { lhs :: [LAgent]
-    , rhs :: [RAgent e]
+    { rlhs :: [LAgent]
+    , rrhs :: [RAgent e]
     , mults :: [e]  
     , rexpr :: RE.Er e
     , cexpr :: RE.Er e
+    } deriving (Show)
+
+data SRule = SRule
+    { lexps :: [Exp]
+    , rexps :: [Exp]
+    , multExps :: [Exp]
+    , srate :: Exp
+    , cond :: Exp
     } deriving (Show)
 
 langDef =
@@ -132,8 +140,8 @@ parseRule = do
     cexpr <- option "{True}" (squares (many1 (noneOf [']'])))
     return 
         Rule
-        { lhs = lhs
-        , rhs = ragents
+        { rlhs = lhs
+        , rrhs = ragents
         , mults = mults
         , rexpr = RE.parseErString rexpr
         , cexpr = RE.parseErString cexpr
