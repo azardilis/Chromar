@@ -10,24 +10,43 @@ import Data.List
 import Chromar.MRuleParser
 import Chromar.MAttrs
 
+import qualified Chromar.RExprs as RE
+
 type FieldProd = (FieldPat, [Exp], Set Name)
 
-data SRule = SRule
-    { lexps :: [Exp]
-    , rexps :: [Exp]
-    , mults :: [Exp]
-    , srate :: Exp
-    , cond :: Exp
-    , decs :: [Dec]  
-    } deriving (Show)
+--RecConE Name [FieldExp]
+-- type FieldExp = (Name, Exp) 
+tLAgent :: LAgent -> Exp
+tLAgent (LAgent nm attrs) =
+    RecConE (mkName nm) (map (\(aNm, v) -> (mkName aNm, VarE $ mkName v)) attrs)
 
+tRAgent :: RAgent Exp -> Exp
+tRAgent (RAgent nm attrs) =
+    RecConE (mkName nm) (map (\(aNm, e) -> (mkName aNm, e)) attrs)
+
+tRateE :: RE.Er Exp -> Exp
+tRateE = RE.mkErApp' . RE.quoteEr 
+
+tCondE :: RE.Er Exp -> Exp
+tCondE = RE.mkErApp' . RE.quoteEr 
 
 {- haskellify the Chromar rule parts
    left agent exprs become Haskell record exprs etc.
 -}
-translate :: ARule Exp -> SRule
-translate = undefined
-
+tRule :: ARule Exp -> SRule
+tRule (Rule { rlhs = ls
+             ,rrhs = rs
+             ,mults = ms
+             ,rexpr = r
+             ,cexpr = c}) =
+    SRule
+    { lexps = map tLAgent ls
+    , rexps = map tRAgent rs
+    , multExps = ms
+    , srate = tRateE r
+    , cond = tCondE c
+    }
+    
 rule :: QuasiQuoter
 rule =
     QuasiQuoter
@@ -221,7 +240,7 @@ mkRxnExp s r = RecConE (mkName "Rxn") fields
     mrexps =
         AppE
             (VarE $ mkName "nrepl")
-            (tuplify2 (ListE $ mults r) (ListE $ rexps r))
+            (tuplify2 (ListE $ multExps r) (ListE $ rexps r))
     lexps' = AppE (VarE $ mkName "ms") (ListE $ lexps r)
     rexps' = AppE (VarE $ mkName "ms") (ParensE mrexps)
     rateExp = srate r
@@ -238,9 +257,9 @@ mkCompStmts s r = do
     let rxnExp = mkRxnExp s r
     let retStmt = mkReturnStmt rxnExp
     let guardStmt = NoBindS (cond r)
-    let letStmt = LetS (decs r)
+    ---let letStmt = LetS (decs r)
     patStmts <- mkLhs (lexps r)
-    return $ patStmts ++ [letStmt, guardStmt, retStmt]
+    return $ patStmts ++ [guardStmt, retStmt]
 
 ruleQuoter' :: SRule -> Q Exp
 ruleQuoter' r = do
@@ -252,22 +271,20 @@ ruleQuoter' r = do
 fluentTransform :: SRule -> Q SRule
 fluentTransform SRule {lexps = les
                       ,rexps = res
-                      ,mults = m         
+                      ,multExps = m         
                       ,srate = r
-                      ,cond = c
-                      ,decs = ds} = do
+                      ,cond = c} = do
     re <- tExp r
     ce <- tExp c
     tres <- mapM tExp res
-    tds <- mapM tDec ds
+--    tds <- mapM tDec ds
     return
         SRule
         { lexps = les
         , rexps = tres
-        , mults = m          
+        , multExps = m          
         , srate = re
         , cond = ce
-        , decs = tds         
         }
 
 ruleQuoter :: String -> Q Exp
@@ -275,9 +292,9 @@ ruleQuoter s =
     case parse parseRule "" s of
         Left err -> error (show err)
         Right r -> do
-            sr <- fluentTransform r
-            sr' <- fillAttrs sr
-            ruleQuoter' sr'
+          let sr = tRule r
+          sr' <- fillAttrs sr
+          ruleQuoter' sr'
 
 ruleQuoter'' :: String -> Q Exp
 ruleQuoter'' s = do
