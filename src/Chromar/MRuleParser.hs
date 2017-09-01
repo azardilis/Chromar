@@ -137,7 +137,7 @@ parseRule = do
     let (mults, ragents) = unzip rhs
     op "@"
     rexpr <- many1 (noneOf ['['])
-    cexpr <- option "{True}" (squares (many1 (noneOf [']'])))
+    cexpr <- option "'True'" (squares (many1 (noneOf [']'])))
     return 
         Rule
         { rlhs = lhs
