@@ -68,9 +68,9 @@ showObs :: [TObs] -> IO ()
 showObs = mapM_ show'
 
 showTObs :: TObs -> String
-showTObs (t, obss) = formatFloatN 2 t ++ " " ++ obssS
+showTObs (t, obss) = show t ++ " " ++ obssS
   where
-    obssS = unwords (map (formatFloatN 2) obss)
+    obssS = unwords (map show obss)
 
 writeObs
     :: (Show a)
