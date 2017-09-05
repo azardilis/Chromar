@@ -304,6 +304,7 @@ lExp nms (ConE nm) = ConE nm
 lExp nms (RecConE nm fexps) = RecConE nm (map (tFExp nms) fexps)
   where
     tFExp nms (nm, exp) = (nm, lExp nms exp)
+lExp nms (CondE e1 e2 e3) = CondE (lExp nms e1) (lExp nms e2) (lExp nms e3)
 lExp nms _ = undefined
 
 mkLiftExp :: Set Name -> Exp -> Exp
