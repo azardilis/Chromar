@@ -32,6 +32,8 @@ library
                       Chromar.Multiset
                       Chromar.MAttrs
                       Chromar.MRuleParser
+		      Chromar.Meta.Types
+		      Chromar.Meta.Conversion
                       Chromar
    
   other-extensions:   BangPatterns
