@@ -18,7 +18,8 @@ library
                       bifunctors,
                       sexp,
                       haskell-src-exts,
-                      word8
+                      word8,
+                      xml		      
 		       
   ghc-options:	      -O2
 		 
