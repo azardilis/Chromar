@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Abs where
+module Chromar.Meta.Types where
 
 import Data.Bifunctor
 import GHC.Generics
