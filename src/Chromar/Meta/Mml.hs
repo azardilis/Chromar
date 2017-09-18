@@ -2,6 +2,7 @@
 
 module Mml where
 
+import Data.Bifunctor
 import Text.XML.Light
 import Chromar.Meta.Types
 
@@ -193,53 +194,51 @@ viewVar (VarE nm) = show nm
 viewVar _ = ""
 
 viewT :: Type -> String
-viewT (ConT nm) = show nm
+viewT (ConT nm) = viewNm nm
 viewT _ = ""
 
 viewNm :: Name -> String
-viewNm nm = show nm
+viewNm (Name (OccName n) _) = n
 
-
---- eq, leq, lt, geq, gt
 toMmlExp :: Exp -> MExp
 toMmlExp (LitE (IntegerL n)) = ConI n
-toMmlExp (ConE (viewNm -> "GHC.Types.True")) = ConB True
-toMmlExp (ConE (viewNm -> "GHC.Types.False")) = ConB False
+toMmlExp (ConE (viewNm -> "True")) = ConB True
+toMmlExp (ConE (viewNm -> "False")) = ConB False
 toMmlExp (VarE nm) = Symb (show nm)
-toMmlExp (AppE (viewVar -> "GHC.Num.abs") e) = UExp Abs (toMmlExp e)
-toMmlExp (AppE (viewVar -> "GHC.Num.negate") e) = UExp Neg (toMmlExp e)
+toMmlExp (AppE (VarE (viewNm -> "abs")) e) = UExp Abs (toMmlExp e)
+toMmlExp (AppE (VarE (viewNm -> "negate")) e) = UExp Neg (toMmlExp e)
 toMmlExp (AppE (viewVar -> (c:cs)) e) = MAppE (c:cs) [toMmlExp e]
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Real.^") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "^")) (Just e2)) =
     BExp Pow (toMmlExp e1) (toMmlExp e2)
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Float.**") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "**")) (Just e2)) =
     BExp Pow (toMmlExp e1) (toMmlExp e2)
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Num.-") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "-")) (Just e2)) =
     BExp Minus (toMmlExp e1) (toMmlExp e2)
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Num./") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "/")) (Just e2)) =
     BExp Div (toMmlExp e1) (toMmlExp e2)
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.==") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "==")) (Just e2)) =
     BExp Eq (toMmlExp e1) (toMmlExp e2)
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.==") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "==")) (Just e2)) =
     BExp Leq (toMmlExp e1) (toMmlExp e2)
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.<") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "<")) (Just e2)) =
     BExp Lt (toMmlExp e1) (toMmlExp e2)
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.>=") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> ">=")) (Just e2)) =
     BExp Geq (toMmlExp e1) (toMmlExp e2)
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.>") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> ">")) (Just e2)) =
     BExp Gt (toMmlExp e1) (toMmlExp e2)
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Num.+") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "+")) (Just e2)) =
     case (toMmlExp e1) of
         NExp Plus es -> NExp Plus (es ++ [toMmlExp e2])
         me -> NExp Plus [me, toMmlExp e2]
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Num.*") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "*")) (Just e2)) =
     case (toMmlExp e1) of
         NExp Times es -> NExp Times (es ++ [toMmlExp e2])
         me -> NExp Times [me, toMmlExp e2]
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.||") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "||")) (Just e2)) =
     case (toMmlExp e2) of
         NExp Or es -> NExp Or (toMmlExp e1: es)
         me -> NExp Or [toMmlExp e1, me]
-toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.&&") (Just e2)) =
+toMmlExp (InfixE (Just e1) (VarE (viewNm -> "&&")) (Just e2)) =
     case (toMmlExp e2) of
         NExp And es -> NExp And (toMmlExp e1 : es)
         me -> NExp And [toMmlExp e1, me]
@@ -248,10 +247,58 @@ toMmlExp (AppE e1 e2) =
         MAppE c es -> MAppE c (es ++ [toMmlExp e2])
 toMmlExp _ = undefined
 
+toMmlExp' :: Exp -> MExp
+toMmlExp' (LitE (IntegerL n)) = ConI n
+toMmlExp' (LitE (RationalL n)) = ConD (fromRational n)
+toMmlExp' (ConE (viewNm -> "True")) = ConB True
+toMmlExp' (ConE (viewNm -> "False")) = ConB False
+toMmlExp' (VarE nm) = Symb (show nm)
+toMmlExp' (AppE (VarE (viewNm -> "abs")) e) = UExp Abs (toMmlExp' e)
+toMmlExp' (AppE (VarE (viewNm -> "negate")) e) = UExp Neg (toMmlExp' e)
+toMmlExp' (AppE (viewVar -> (c:cs)) e) = MAppE (c:cs) [toMmlExp' e]
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "^")) e2) =
+    BExp Pow (toMmlExp' e1) (toMmlExp' e2)
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "**")) e2) =
+    BExp Pow (toMmlExp' e1) (toMmlExp' e2)
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "-")) e2) =
+    BExp Minus (toMmlExp' e1) (toMmlExp' e2)
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "/")) e2) =
+    BExp Div (toMmlExp' e1) (toMmlExp' e2)
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "==")) e2) =
+    BExp Eq (toMmlExp' e1) (toMmlExp' e2)
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "==")) e2) =
+    BExp Leq (toMmlExp' e1) (toMmlExp' e2)
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "<")) e2) =
+    BExp Lt (toMmlExp' e1) (toMmlExp' e2)
+toMmlExp' (UInfixE e1 (VarE (viewNm -> ">=")) e2) =
+    BExp Geq (toMmlExp' e1) (toMmlExp' e2)
+toMmlExp' (UInfixE e1 (VarE (viewNm -> ">")) e2) =
+    BExp Gt (toMmlExp' e1) (toMmlExp' e2)
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "+")) e2) =
+    case (toMmlExp' e1) of
+        NExp Plus es -> NExp Plus (es ++ [toMmlExp' e2])
+        me -> NExp Plus [me, toMmlExp' e2]
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "*")) e2) =
+    case (toMmlExp' e1) of
+        NExp Times es -> NExp Times (es ++ [toMmlExp' e2])
+        me -> NExp Times [me, toMmlExp' e2]
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "||")) e2) =
+    case (toMmlExp' e2) of
+        NExp Or es -> NExp Or (toMmlExp' e1: es)
+        me -> NExp Or [toMmlExp' e1, me]
+toMmlExp' (UInfixE e1 (VarE (viewNm -> "&&")) e2) =
+    case (toMmlExp' e2) of
+        NExp And es -> NExp And (toMmlExp' e1 : es)
+        me -> NExp And [toMmlExp' e1, me]
+toMmlExp' (AppE e1 e2) =
+    case (toMmlExp' e1) of
+        MAppE c es -> MAppE c (es ++ [toMmlExp' e2])
+toMmlExp' _ = undefined
+
 toMmlType :: Type -> MType
-toMmlType (viewT -> "GHC.Types.Int") = MInt
-toMmlType (viewT -> "GHC.Types.Double") = MReal
-toMmlType (viewT -> "GHC.Types.Bool") = MBool
+toMmlType (viewT -> "Int") = MInt
+toMmlType (viewT -> "Double") = MReal
+toMmlType (viewT -> "Bool") = MBool
 
 testAgentType :: IO ()
 testAgentType = mapM_ print $ lines (ppElement (toXml agentt))
@@ -279,9 +326,8 @@ testRule = mapM_ print $ lines (ppElement (toXml r))
 testMml :: MExp -> IO ()
 testMml mml = mapM_ print $ lines (ppElement (toXml mml))
 
-{-
-
-bimap toMmlExp toMMlType
-to transform a Chromar H.Exp H.Type to Chromar MExp MType
-and then can turn into xml using toXML
--}
+go :: FilePath -> FilePath -> IO ()
+go fin fout = do
+  m <- fromMod fin
+  let mmlM = bimap toMmlExp' toMmlType m
+  writeFile fout (ppElement (toXml mmlM)) 
