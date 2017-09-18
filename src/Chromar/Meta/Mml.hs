@@ -24,13 +24,19 @@ data BinOp
     = Div
     | Minus
     | Pow
+    | Eq
+    | Lt  
+    | Leq
+    | Geq
+    | Gt  
     deriving (Show)
-
+             
+--- eq, leq, lt, geq, gt
 data NOp
     = Plus
     | Times
     | And
-    | Or  
+    | Or
     deriving (Show)
 
 data MExp
@@ -102,6 +108,8 @@ mkFnApp fnm args = defElem "apply" ([Elem $ defElem "csymbol" [textContent fnm]]
 class ToXML a where
   toXml :: a -> Element
 
+--- TODO This should be toXml :: a -> Content instead of Element  
+
 ---remember to use the mml namespace xmlns="http://www.w3.org/1998/Math/MathML"
 instance ToXML MExp where
   toXml (ConB b) = defElemAttrs "cn" [("type", "bool")] [textContent $ show b]
@@ -113,6 +121,11 @@ instance ToXML MExp where
   toXml (BExp Div me1 me2) = mkOpApp "divide" [Elem $ toXml me1, Elem $ toXml me2]
   toXml (BExp Minus me1 me2) = mkOpApp "minus" [Elem $ toXml me1, Elem $ toXml me2]
   toXml (BExp Pow me1 me2) = mkOpApp "power" [Elem $ toXml me1, Elem $ toXml me2]
+  toXml (BExp Eq me1 me2) = mkOpApp "eq" [Elem $ toXml me1, Elem $ toXml me2]
+  toXml (BExp Leq me1 me2) = mkOpApp "leq" [Elem $ toXml me1, Elem $ toXml me2]
+  toXml (BExp Lt me1 me2) = mkOpApp "lt" [Elem $ toXml me1, Elem $ toXml me2]
+  toXml (BExp Geq me1 me2) = mkOpApp "geq" [Elem $ toXml me1, Elem $ toXml me2]
+  toXml (BExp Gt me1 me2) = mkOpApp "gt" [Elem $ toXml me1, Elem $ toXml me2]
   toXml (NExp Plus mes) = mkOpApp "plus" (map (Elem . toXml) mes)
   toXml (NExp Times mes) = mkOpApp "times" (map (Elem . toXml) mes)
   toXml (NExp And mes) = mkOpApp "and" (map (Elem . toXml) mes)
@@ -166,8 +179,14 @@ instance (ToXML e) =>
         rexprElem = defElem "math" [Elem $ toXml re]
         cexprElem = defElem "math" [Elem $ toXml ce]
 
-instance (ToXML e, ToXML t) => ToXML (Chromar e t) where
-  toXml m = undefined
+instance (ToXML e, Show t) =>
+         ToXML (Chromar e t) where
+    toXml Chromar {agentDecls = agentDecls
+                  ,iState = ragents
+                  ,rules = rs} = defElem "model" [Elem $ adeclsElem, Elem $ rulesElem]
+      where
+        adeclsElem = defElem "adecls" (map (Elem . toXml) agentDecls)
+        rulesElem = defElem "rules" (map (Elem . toXml) rs)
 
 viewVar :: Exp -> String
 viewVar (VarE nm) = show nm
@@ -180,6 +199,8 @@ viewT _ = ""
 viewNm :: Name -> String
 viewNm nm = show nm
 
+
+--- eq, leq, lt, geq, gt
 toMmlExp :: Exp -> MExp
 toMmlExp (LitE (IntegerL n)) = ConI n
 toMmlExp (ConE (viewNm -> "GHC.Types.True")) = ConB True
@@ -196,6 +217,16 @@ toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Num.-") (Just e2)) =
     BExp Minus (toMmlExp e1) (toMmlExp e2)
 toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Num./") (Just e2)) =
     BExp Div (toMmlExp e1) (toMmlExp e2)
+toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.==") (Just e2)) =
+    BExp Eq (toMmlExp e1) (toMmlExp e2)
+toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.==") (Just e2)) =
+    BExp Leq (toMmlExp e1) (toMmlExp e2)
+toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.<") (Just e2)) =
+    BExp Lt (toMmlExp e1) (toMmlExp e2)
+toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.>=") (Just e2)) =
+    BExp Geq (toMmlExp e1) (toMmlExp e2)
+toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.>") (Just e2)) =
+    BExp Gt (toMmlExp e1) (toMmlExp e2)
 toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Num.+") (Just e2)) =
     case (toMmlExp e1) of
         NExp Plus es -> NExp Plus (es ++ [toMmlExp e2])
@@ -211,7 +242,7 @@ toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.||") (Just e2)) =
 toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Classes.&&") (Just e2)) =
     case (toMmlExp e2) of
         NExp And es -> NExp And (toMmlExp e1 : es)
-        me -> NExp And [me, toMmlExp e2]
+        me -> NExp And [toMmlExp e1, me]
 toMmlExp (AppE e1 e2) =
     case (toMmlExp e1) of
         MAppE c es -> MAppE c (es ++ [toMmlExp e2])
@@ -237,6 +268,14 @@ testRAgent = mapM_ print $ lines (ppElement (toXml ragent))
   where
     ragent = RAgent "A" [("x", NExp Plus [Symb "x", ConI 1])]
 
+testRule :: IO ()
+testRule = mapM_ print $ lines (ppElement (toXml r))
+  where
+    r = Rule {lhs = [LAgent "A" [("x", "x")]],
+              rhs = [RAgent "A" [("x", NExp Plus [Symb "x", ConI 1])]],
+              rexpr = ConD 2.0,
+              cexpr = ConB True }
+                     
 testMml :: MExp -> IO ()
 testMml mml = mapM_ print $ lines (ppElement (toXml mml))
 
