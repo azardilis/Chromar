@@ -38,7 +38,7 @@ data MExp
     | UExp UnOp MExp
     | BExp BinOp MExp MExp
     | NExp NOp [MExp]
-    | MAppE Mnm [MExp]       
+    | MAppE MNm [MExp]       
     deriving (Show)
 
 
@@ -116,7 +116,7 @@ toMmlExp (LitE (IntegerL n)) = ConI n
 toMmlExp (VarE nm) = Symb (show nm)
 toMmlExp (AppE (viewVar -> "GHC.Num.abs") e) = UExp Abs (toMmlExp e)
 toMmlExp (AppE (viewVar -> "GHC.Num.negate") e) = UExp Neg (toMmlExp e)
-toMmlExp (AppE (viewVar -> c) e) = MAppE c [toMmlExp e]
+toMmlExp (AppE (viewVar -> (c:cs)) e) = MAppE (c:cs) [toMmlExp e]
 toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Real.^") (Just e2)) =
     BExp Pow (toMmlExp e1) (toMmlExp e2)
 toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Float.**") (Just e2)) =
@@ -133,6 +133,9 @@ toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Num.*") (Just e2)) =
     case (toMmlExp e1) of
         NExp Times es -> NExp Times (es ++ [toMmlExp e2])
         me -> NExp Times [me, toMmlExp e2]
+toMmlExp (AppE e1 e2) =
+    case (toMmlExp e1) of
+        MAppE c es -> MAppE c (es ++ [toMmlExp e2])
 toMmlExp _ = undefined
 
 toMmlType :: Type -> MType
