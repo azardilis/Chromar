@@ -55,6 +55,32 @@ defElem nm cs =
     , elLine = Nothing
     }
 
+defElemAttrs nm attrs cs =
+    Element
+    { elName =
+        QName
+        { qName = nm
+        , qURI = Nothing
+        , qPrefix = Nothing
+        }
+    , elAttribs = defAttrs attrs
+    , elContent = cs
+    , elLine = Nothing
+    }
+
+defAttrs attrs = map mkAttr attrs
+  where
+    mkAttr (nm, v) =
+        Attr
+        { attrKey =
+            QName
+            { qName = nm
+            , qURI = Nothing
+            , qPrefix = Nothing
+            }
+        , attrVal = v
+        }
+
 textContent s =
     Text
         (CData
@@ -67,16 +93,31 @@ agentNmElem nm = defElem "agentNm" [textContent nm]
 
 attrNmElem attrNm = defElem "attrName" [textContent attrNm]
 
-class XMLable a where
+mkOpApp op args = defElem "apply" ([Elem $ defElem op []] ++ args)
+
+mkFnApp fnm args = defElem "apply" ([Elem $ defElem "csymbol" [textContent fnm]] ++ args)
+
+class ToXML a where
   toXml :: a -> Element
 
-instance XMLable MExp where
-  toXml e = undefined
+---remember to use the mml namespace xmlns="http://www.w3.org/1998/Math/MathML"
+instance ToXML MExp where
+  toXml (ConI n) = defElemAttrs "cn" [("type", "integer")] [textContent $ show n]
+  toXml (ConD n) = defElemAttrs "cn" [("type", "real")] [textContent $ show n]
+  toXml (Symb nm) = defElem "ci" [textContent nm]
+  toXml (UExp Neg me) = mkOpApp "minus" [Elem $ toXml me]
+  toXml (UExp Abs me) = mkOpApp "abs" [Elem $ toXml me]
+  toXml (BExp Div me1 me2) = mkOpApp "divide" [Elem $ toXml me1, Elem $ toXml me2]
+  toXml (BExp Minus me1 me2) = mkOpApp "minus" [Elem $ toXml me1, Elem $ toXml me2]
+  toXml (BExp Pow me1 me2) = mkOpApp "power" [Elem $ toXml me1, Elem $ toXml me2]
+  toXml (NExp Plus mes) = mkOpApp "plus" (map (Elem . toXml) mes)
+  toXml (NExp Times mes) = mkOpApp "times" (map (Elem . toXml) mes)
+  toXml (MAppE fnm mes) = mkFnApp fnm (map (Elem . toXml) mes)
 
-instance (XMLable e, XMLable t) => XMLable (Chromar e t) where
+instance (ToXML e, ToXML t) => ToXML (Chromar e t) where
   toXml m = undefined
 
-instance (Show a) => XMLable (AgentType a) where
+instance (Show a) => ToXML (AgentType a) where
     toXml (AgentType nm intf) =
         defElem "agentDecl" [Elem $ agentNmElem nm, Elem $ intfElem]
       where
@@ -85,7 +126,7 @@ instance (Show a) => XMLable (AgentType a) where
             defElem "attrDecl" [Elem $ attrNmElem attrNm, Elem $ attrTypeElem t]
         intfElem = defElem "intfDecl" $ map (Elem . attrElem) intf
 
-instance XMLable LAgent where
+instance ToXML LAgent where
   toXml (LAgent nm intf) =
       defElem "lAgent" [Elem $ agentNmElem nm, Elem $ intfElem]
     where
@@ -94,10 +135,10 @@ instance XMLable LAgent where
           defElem "attrBind" [Elem $ attrNmElem attrNm, Elem $ attrBindElem v]
       intfElem = defElem "intfLAgent" $ map (Elem . attrElem) intf
 
-instance (XMLable e) => XMLable (RAgent e) where
+instance (ToXML e) => ToXML (RAgent e) where
   toXml (RAgent nm intf) = undefined
 
-instance (XMLable e) => XMLable (ARule e) where
+instance (ToXML e) => ToXML (ARule e) where
   toXml Rule {lhs = lhs
              ,rhs = rhs
              ,rexpr = re
@@ -153,6 +194,9 @@ testLAgent :: IO ()
 testLAgent = mapM_ print $ lines (ppElement (toXml ragent))
   where
     ragent = LAgent "A" [("x", "x")]
+
+testMml :: MExp -> IO ()
+testMml mml = mapM_ print $ lines (ppElement (toXml mml))
 
 {-
 
