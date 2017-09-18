@@ -13,7 +13,7 @@ type MNm = String
 data MType
     = MInt  
     | MReal
-    | MBool
+    | MBool deriving (Show)
 
 data UnOp
     = Neg
@@ -35,27 +35,73 @@ data MExp
     = ConI Integer
     | ConD Double
     | Symb MNm
-    | UExp UnOp
-           MExp
-    | BExp BinOp
-           MExp
-           MExp
-    | NExp NOp
-           [MExp]
+    | UExp UnOp MExp
+    | BExp BinOp MExp MExp
+    | NExp NOp [MExp]
+    | MAppE Mnm [MExp]       
     deriving (Show)
 
 
+defElem nm cs =
+    Element
+    { elName =
+        QName
+        { qName = nm
+        , qURI = Nothing
+        , qPrefix = Nothing
+        }
+    , elAttribs = []
+    , elContent = cs
+    , elLine = Nothing
+    }
+
+textContent s =
+    Text
+        (CData
+         { cdVerbatim = CDataRaw
+         , cdData = s
+         , cdLine = Nothing
+         })
+
+agentNmElem nm = defElem "agentNm" [textContent nm]
+
+attrNmElem attrNm = defElem "attrName" [textContent attrNm]
+
 class XMLable a where
-  toXML :: a -> Element
+  toXml :: a -> Element
 
 instance XMLable MExp where
-  toXML e = undefined
-
-instance XMLable MType where
-  toXML t = undefined
+  toXml e = undefined
 
 instance (XMLable e, XMLable t) => XMLable (Chromar e t) where
-  toXML m = undefined
+  toXml m = undefined
+
+instance (Show a) => XMLable (AgentType a) where
+    toXml (AgentType nm intf) =
+        defElem "agentDecl" [Elem $ agentNmElem nm, Elem $ intfElem]
+      where
+        attrTypeElem t = defElem "attrType" [textContent $ show t]
+        attrElem (attrNm, t) =
+            defElem "attrDecl" [Elem $ attrNmElem attrNm, Elem $ attrTypeElem t]
+        intfElem = defElem "intfDecl" $ map (Elem . attrElem) intf
+
+instance XMLable LAgent where
+  toXml (LAgent nm intf) =
+      defElem "lAgent" [Elem $ agentNmElem nm, Elem $ intfElem]
+    where
+      attrBindElem v = defElem "varBind" [textContent v]
+      attrElem (attrNm, v) =
+          defElem "attrBind" [Elem $ attrNmElem attrNm, Elem $ attrBindElem v]
+      intfElem = defElem "intfLAgent" $ map (Elem . attrElem) intf
+
+instance (XMLable e) => XMLable (RAgent e) where
+  toXml (RAgent nm intf) = undefined
+
+instance (XMLable e) => XMLable (ARule e) where
+  toXml Rule {lhs = lhs
+             ,rhs = rhs
+             ,rexpr = re
+             ,cexpr = ce} = undefined
 
 viewVar :: Exp -> String
 viewVar (VarE nm) = show nm
@@ -70,6 +116,7 @@ toMmlExp (LitE (IntegerL n)) = ConI n
 toMmlExp (VarE nm) = Symb (show nm)
 toMmlExp (AppE (viewVar -> "GHC.Num.abs") e) = UExp Abs (toMmlExp e)
 toMmlExp (AppE (viewVar -> "GHC.Num.negate") e) = UExp Neg (toMmlExp e)
+toMmlExp (AppE (viewVar -> c) e) = MAppE c [toMmlExp e]
 toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Real.^") (Just e2)) =
     BExp Pow (toMmlExp e1) (toMmlExp e2)
 toMmlExp (InfixE (Just e1) (viewVar -> "GHC.Float.**") (Just e2)) =
@@ -94,34 +141,15 @@ toMmlType (viewT -> "GHC.Types.Double") = MReal
 toMmlType (viewT -> "GHC.Types.Bool") = MBool
 
 
-exElem =
-    Element
-    { elName =
-        QName
-        { qName = "value"
-        , qURI = Nothing
-        , qPrefix = Nothing
-        }
-    , elAttribs = []
-    , elContent =
-        [ Text
-              (CData
-               { cdVerbatim = CDataRaw
-               , cdData = "10"
-               , cdLine = Nothing
-               }),
-          Text
-              (CData
-               { cdVerbatim = CDataRaw
-               , cdData = "10"
-               , cdLine = Nothing
-               })
-        ]
-    , elLine = Nothing
-    }
-                           
+testAgentType :: IO ()
+testAgentType = mapM_ print $ lines (ppElement (toXml agentt))
+  where
+    agentt = AgentType "A" [("x", MInt)]
 
-testXML = ppElement exElem
+testLAgent :: IO ()
+testLAgent = mapM_ print $ lines (ppElement (toXml ragent))
+  where
+    ragent = LAgent "A" [("x", "x")]
 
 {-
 
