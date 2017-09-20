@@ -2,20 +2,20 @@
 
 module Chromar.Meta.Types where
 
-import Data.Bifunctor
-import GHC.Generics
-import Data.Sexp
-import Language.Sexp.Printer
-import Data.Ratio
-import Data.Word8
-import Language.Haskell.Meta.Parse
-import Chromar.MRuleParser
-import Language.Haskell.Meta.Syntax.Translate
-import Text.Parsec
-import Language.Haskell.Exts (parseFile)
-import Language.Haskell.Exts.Parser (ParseResult(..))
-import qualified Language.Haskell.Exts.Syntax as E
-import qualified Language.Haskell.TH.Syntax as H
+import           Chromar.MRuleParser
+import           Data.Bifunctor
+import           Data.Ratio
+import           Data.Sexp
+import           Data.Word8
+import           GHC.Generics
+import           Language.Haskell.Exts                  (parseFile)
+import           Language.Haskell.Exts.Parser           (ParseResult (..))
+import qualified Language.Haskell.Exts.Syntax           as E
+import           Language.Haskell.Meta.Parse
+import           Language.Haskell.Meta.Syntax.Translate
+import qualified Language.Haskell.TH.Syntax             as H
+import           Language.Sexp.Printer
+import           Text.Parsec
 
 type Nm = String
 
@@ -29,7 +29,7 @@ data AgentType t =
     AgentType Nm
               [(AttrName, t)]
     deriving (Generic, Show)
-                                       
+
 instance (Sexpable t) => Sexpable (AgentType t)
 
 instance Functor AgentType where
@@ -44,7 +44,7 @@ data RAgent e =
            [(AttrName, e)]
     deriving (Generic, Show)
 
-instance (Sexpable e) => Sexpable (RAgent e) 
+instance (Sexpable e) => Sexpable (RAgent e)
 
 instance Functor RAgent where
     fmap f (RAgent nm attrs) =
@@ -60,8 +60,8 @@ data LAgent =
 instance Sexpable LAgent
 
 data ARule e = Rule
-    { lhs :: [LAgent]
-    , rhs :: [RAgent e]
+    { lhs   :: [LAgent]
+    , rhs   :: [RAgent e]
     , rexpr :: e
     , cexpr :: e
     } deriving (Generic, Show)
@@ -84,8 +84,8 @@ instance Functor ARule where
 
 data Chromar e t = Chromar
     { agentDecls :: [AgentType t]
-    , iState :: Multiset (RAgent e)
-    , rules :: [ARule e]
+    , iState     :: Multiset (RAgent e)
+    , rules      :: [ARule e]
     } deriving (Generic, Show)
 
 instance (Sexpable e, Sexpable t) => Sexpable (Chromar e t)
@@ -127,14 +127,14 @@ instance Bifunctor Chromar where
         , iState = ist
         , rules = rs
         }
-                        
+
 {-
 then for every change in the 'inside language' we do bimap ...
 for every change in the representation we need (le'ts take xml as an example)
 
 instance (ToXML e, ToXML t) => ToXML (Chromar e t) where
    toXML (Chromar{..}) = ...
--} 
+-}
 
 
 {-
@@ -240,11 +240,11 @@ getRules (E.PatBind _ (E.PVar (E.Ident nm)) (E.UnGuardedRhs e) _) = goRule e
       | otherwise = []
     goRule _ = []
 getRules _ = []
-                                              
+
 getATypes :: E.Decl -> [AgentType H.Type]
 getATypes (E.DataDecl _ E.DataType _ (E.Ident nm) _ constrs _)
   | nm == "Agent" = map getAT constrs
-  | otherwise = []                  
+  | otherwise = []
 getATypes _ = []
 
 getAT :: E.QualConDecl -> AgentType H.Type
