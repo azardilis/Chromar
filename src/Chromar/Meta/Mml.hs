@@ -2,17 +2,17 @@
 
 module Mml where
 
-import Data.Bifunctor
-import Text.XML.Light
-import Chromar.Meta.Types
+import           Chromar.Meta.Types
+import           Data.Bifunctor
+import           Text.XML.Light
 
-import Language.Haskell.TH.Syntax
+import           Language.Haskell.TH.Syntax
 
 ---- type for a subset of mathml
 type MNm = String
 
 data MType
-    = MInt  
+    = MInt
     | MReal
     | MBool deriving (Show)
 
@@ -26,13 +26,12 @@ data BinOp
     | Minus
     | Pow
     | Eq
-    | Lt  
+    | Lt
     | Leq
     | Geq
-    | Gt  
+    | Gt
     deriving (Show)
-             
---- eq, leq, lt, geq, gt
+
 data NOp
     = Plus
     | Times
@@ -48,10 +47,10 @@ data MExp
     | UExp UnOp MExp
     | BExp BinOp MExp MExp
     | NExp NOp [MExp]
-    | MAppE MNm [MExp]       
+    | MAppE MNm [MExp]
     deriving (Show)
 
-defElem nm cs =
+defElem nm cs = Elem $
     Element
     { elName =
         QName
@@ -64,7 +63,7 @@ defElem nm cs =
     , elLine = Nothing
     }
 
-defElemAttrs nm attrs cs =
+defElemAttrs nm attrs cs = Elem $
     Element
     { elName =
         QName
@@ -102,14 +101,18 @@ agentNmElem nm = defElem "agentNm" [textContent nm]
 
 attrNmElem attrNm = defElem "attrName" [textContent attrNm]
 
-mkOpApp op args = defElem "apply" ([Elem $ defElem op []] ++ args)
+mkOpApp op args = defElem "apply" ([defElem op []] ++ args)
 
-mkFnApp fnm args = defElem "apply" ([Elem $ defElem "csymbol" [textContent fnm]] ++ args)
+mkFnApp fnm args = defElem "apply" ([defElem "csymbol" [textContent fnm]] ++ args)
 
 class ToXML a where
-  toXml :: a -> Element
+  toXml :: a -> Content
 
---- TODO This should be toXml :: a -> Content instead of Element  
+
+instance ToXML MType where
+  toXml MInt = textContent "integer"
+  toXml MReal = textContent "real"
+  toXml MBool = textContent "bool"
 
 ---remember to use the mml namespace xmlns="http://www.w3.org/1998/Math/MathML"
 instance ToXML MExp where
@@ -117,49 +120,49 @@ instance ToXML MExp where
   toXml (ConI n) = defElemAttrs "cn" [("type", "integer")] [textContent $ show n]
   toXml (ConD n) = defElemAttrs "cn" [("type", "real")] [textContent $ show n]
   toXml (Symb nm) = defElem "ci" [textContent nm]
-  toXml (UExp Neg me) = mkOpApp "minus" [Elem $ toXml me]
-  toXml (UExp Abs me) = mkOpApp "abs" [Elem $ toXml me]
-  toXml (BExp Div me1 me2) = mkOpApp "divide" [Elem $ toXml me1, Elem $ toXml me2]
-  toXml (BExp Minus me1 me2) = mkOpApp "minus" [Elem $ toXml me1, Elem $ toXml me2]
-  toXml (BExp Pow me1 me2) = mkOpApp "power" [Elem $ toXml me1, Elem $ toXml me2]
-  toXml (BExp Eq me1 me2) = mkOpApp "eq" [Elem $ toXml me1, Elem $ toXml me2]
-  toXml (BExp Leq me1 me2) = mkOpApp "leq" [Elem $ toXml me1, Elem $ toXml me2]
-  toXml (BExp Lt me1 me2) = mkOpApp "lt" [Elem $ toXml me1, Elem $ toXml me2]
-  toXml (BExp Geq me1 me2) = mkOpApp "geq" [Elem $ toXml me1, Elem $ toXml me2]
-  toXml (BExp Gt me1 me2) = mkOpApp "gt" [Elem $ toXml me1, Elem $ toXml me2]
-  toXml (NExp Plus mes) = mkOpApp "plus" (map (Elem . toXml) mes)
-  toXml (NExp Times mes) = mkOpApp "times" (map (Elem . toXml) mes)
-  toXml (NExp And mes) = mkOpApp "and" (map (Elem . toXml) mes)
-  toXml (NExp Or mes) = mkOpApp "or" (map (Elem . toXml) mes)
-  toXml (MAppE fnm mes) = mkFnApp fnm (map (Elem . toXml) mes)
+  toXml (UExp Neg me) = mkOpApp "minus" [toXml me]
+  toXml (UExp Abs me) = mkOpApp "abs" [toXml me]
+  toXml (BExp Div me1 me2) = mkOpApp "divide" [toXml me1,  toXml me2]
+  toXml (BExp Minus me1 me2) = mkOpApp "minus" [toXml me1,  toXml me2]
+  toXml (BExp Pow me1 me2) = mkOpApp "power" [toXml me1,  toXml me2]
+  toXml (BExp Eq me1 me2) = mkOpApp "eq" [toXml me1,  toXml me2]
+  toXml (BExp Leq me1 me2) = mkOpApp "leq" [toXml me1,  toXml me2]
+  toXml (BExp Lt me1 me2) = mkOpApp "lt" [toXml me1,  toXml me2]
+  toXml (BExp Geq me1 me2) = mkOpApp "geq" [toXml me1,  toXml me2]
+  toXml (BExp Gt me1 me2) = mkOpApp "gt" [toXml me1,  toXml me2]
+  toXml (NExp Plus mes) = mkOpApp "plus" (map toXml mes)
+  toXml (NExp Times mes) = mkOpApp "times" (map toXml mes)
+  toXml (NExp And mes) = mkOpApp "and" (map toXml mes)
+  toXml (NExp Or mes) = mkOpApp "or" (map toXml mes)
+  toXml (MAppE fnm mes) = mkFnApp fnm (map toXml mes)
 
-instance (Show a) => ToXML (AgentType a) where
+instance (ToXML a) => ToXML (AgentType a) where
     toXml (AgentType nm intf) =
-        defElem "agentDecl" [Elem $ agentNmElem nm, Elem $ intfElem]
+        defElem "agentDecl" [agentNmElem nm, intfElem]
       where
-        attrTypeElem t = defElem "attrType" [textContent $ show t]
+        attrTypeElem t = defElem "attrType" [toXml t]
         attrElem (attrNm, t) =
-            defElem "attrDecl" [Elem $ attrNmElem attrNm, Elem $ attrTypeElem t]
-        intfElem = defElem "intfDecl" $ map (Elem . attrElem) intf
+            defElem "attrDecl" [attrNmElem attrNm, attrTypeElem t]
+        intfElem = defElem "intfDecl" $ map attrElem intf
 
 instance ToXML LAgent where
   toXml (LAgent nm intf) =
-      defElem "lAgent" [Elem $ agentNmElem nm, Elem $ intfElem]
+      defElem "lAgent" [agentNmElem nm, intfElem]
     where
       attrBindElem v = defElem "varBind" [textContent v]
       attrElem (attrNm, v) =
-          defElem "attrBind" [Elem $ attrNmElem attrNm, Elem $ attrBindElem v]
-      intfElem = defElem "intfLAgent" $ map (Elem . attrElem) intf
+          defElem "attrBind" [attrNmElem attrNm, attrBindElem v]
+      intfElem = defElem "intfLAgent" $ map attrElem intf
 
 instance (ToXML e) =>
          ToXML (RAgent e) where
     toXml (RAgent nm intf) =
-        defElem "ragent" [Elem $ agentNmElem nm, Elem $ intfElem]
+        defElem "ragent" [agentNmElem nm, intfElem]
       where
-        attrExprElem e = defElem "math" [Elem $ toXml e]
+        attrExprElem e = defElem "math" [toXml e]
         rattrElem (attrNm, e) =
-            defElem "attrExpr" [Elem $ attrNmElem attrNm, Elem $ attrExprElem e]
-        intfElem = defElem "intfRAgent" $ map (Elem . rattrElem) intf
+            defElem "attrExpr" [attrNmElem attrNm, attrExprElem e]
+        intfElem = defElem "intfRAgent" $ map rattrElem intf
 
 instance (ToXML e) =>
          ToXML (ARule e) where
@@ -169,25 +172,25 @@ instance (ToXML e) =>
                ,cexpr = ce} =
         defElem
             "rule"
-            [ Elem $ lhsElem 
-            , Elem $ rhsElem 
-            , Elem $ rexprElem 
-            , Elem $ cexprElem
+            [ lhsElem
+            , rhsElem
+            , rexprElem
+            , cexprElem
             ]
       where
-        lhsElem = defElem "lhs" (map (Elem . toXml) lhs)
-        rhsElem = defElem "rhs" (map (Elem . toXml) rhs)
-        rexprElem = defElem "math" [Elem $ toXml re]
-        cexprElem = defElem "math" [Elem $ toXml ce]
+        lhsElem = defElem "lhs" (map toXml lhs)
+        rhsElem = defElem "rhs" (map toXml rhs)
+        rexprElem = defElem "math" [toXml re]
+        cexprElem = defElem "math" [toXml ce]
 
-instance (ToXML e, Show t) =>
+instance (ToXML e, ToXML t) =>
          ToXML (Chromar e t) where
     toXml Chromar {agentDecls = agentDecls
                   ,iState = ragents
-                  ,rules = rs} = defElem "model" [Elem $ adeclsElem, Elem $ rulesElem]
+                  ,rules = rs} = defElem "model" [adeclsElem, rulesElem]
       where
-        adeclsElem = defElem "adecls" (map (Elem . toXml) agentDecls)
-        rulesElem = defElem "rules" (map (Elem . toXml) rs)
+        adeclsElem = defElem "adecls" (map toXml agentDecls)
+        rulesElem = defElem "rules" (map toXml rs)
 
 viewVar :: Exp -> String
 viewVar (VarE nm) = show nm
@@ -301,33 +304,33 @@ toMmlType (viewT -> "Double") = MReal
 toMmlType (viewT -> "Bool") = MBool
 
 testAgentType :: IO ()
-testAgentType = mapM_ print $ lines (ppElement (toXml agentt))
+testAgentType = mapM_ print $ lines (ppContent (toXml agentt))
   where
     agentt = AgentType "A" [("x", MInt)]
 
 testLAgent :: IO ()
-testLAgent = mapM_ print $ lines (ppElement (toXml ragent))
+testLAgent = mapM_ print $ lines (ppContent (toXml ragent))
   where
     ragent = LAgent "A" [("x", "x")]
 
 testRAgent :: IO ()
-testRAgent = mapM_ print $ lines (ppElement (toXml ragent))
+testRAgent = mapM_ print $ lines (ppContent (toXml ragent))
   where
     ragent = RAgent "A" [("x", NExp Plus [Symb "x", ConI 1])]
 
 testRule :: IO ()
-testRule = mapM_ print $ lines (ppElement (toXml r))
+testRule = mapM_ print $ lines (ppContent (toXml r))
   where
     r = Rule {lhs = [LAgent "A" [("x", "x")]],
               rhs = [RAgent "A" [("x", NExp Plus [Symb "x", ConI 1])]],
               rexpr = ConD 2.0,
               cexpr = ConB True }
-                     
+
 testMml :: MExp -> IO ()
-testMml mml = mapM_ print $ lines (ppElement (toXml mml))
+testMml mml = mapM_ print $ lines (ppContent (toXml mml))
 
 go :: FilePath -> FilePath -> IO ()
 go fin fout = do
   m <- fromMod fin
   let mmlM = bimap toMmlExp' toMmlType m
-  writeFile fout (ppElement (toXml mmlM)) 
+  writeFile fout (ppContent (toXml mmlM))
