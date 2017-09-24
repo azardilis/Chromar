@@ -1,31 +1,31 @@
 module Chromar.RExprs where
 
-import Language.Haskell.TH
-import Language.Haskell.TH.Quote
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Text.ParserCombinators.Parsec
-import Data.List
-import Text.Parsec
-import Language.Haskell.Meta.Parse
-import Language.Haskell.TH.Syntax
-import Text.Parsec.String (Parser)
-import Text.Parsec.Language (emptyDef)
-import Text.Parsec.Token (makeTokenParser)
-import Data.Fixed
-import Data.Maybe
+import           Data.Fixed
+import           Data.List
+import           Data.Maybe
+import           Data.Set                      (Set)
+import qualified Data.Set                      as Set
+import           Language.Haskell.Meta.Parse
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Quote
+import           Language.Haskell.TH.Syntax
+import           Text.Parsec
+import           Text.Parsec.Language          (emptyDef)
+import           Text.Parsec.String            (Parser)
+import           Text.Parsec.Token             (makeTokenParser)
+import           Text.ParserCombinators.Parsec
 
-import qualified Text.Parsec.Token as Tok
+import qualified Text.Parsec.Token             as Tok
 
-import Chromar.Multiset
-import Chromar.Core
+import           Chromar.Core
+import           Chromar.Multiset
 
 data ErF a b = ErF { at :: Multiset a -> Time -> b }
 
 mmod :: Real a => a -> a -> a
 mmod n m
   | m <=0 = 0
-  | otherwise = mod' n m          
+  | otherwise = mod' n m
 
 zipEr2 :: ErF a b -> ErF a c -> ErF a (b, c)
 zipEr2 e1 e2 =
@@ -209,20 +209,24 @@ repeatExpr f = do
   er2 <- parseEr f
   return $ Repeat er1 er2
 
+foldExpr :: (String -> e) -> Parser (Nm, Er e)
+foldExpr f = do
+  nm <- Tok.identifier lexer
+  Tok.symbol lexer "."
+  er <- parseEr f
+  return $ (nm, er)
+
 obsExpr :: (String -> e) -> Parser (Er e)
 obsExpr f = do
     op "select"
     lat <- lagent
     op ";"
     op "aggregate"
-    nm <-
+    (nm, er1) <-
         Text.Parsec.between
             (Tok.symbol lexer "(")
             (Tok.symbol lexer ")")
-            (Tok.identifier lexer)
-    Tok.symbol lexer "."
-    er1 <- parseEr f
-    Tok.symbol lexer ","
+            (foldExpr f)
     er2 <- parseEr f
     return $ Obs (parseP lat) nm er1 er2
 
@@ -372,7 +376,7 @@ er =
 ------------- testing
 contents = "repeatEvery '5' (when '$light$ + 1' '5' else '1')"
 
-contents' = "select Leaf{m=m}; aggregate(count).'count + m', '0'"
+contents' = "select Leaf{m=m}; aggregate (count.'count + m') '0'"
 
 go = case parse (parseEr mkExp) "er" contents' of
   (Left err) -> error (show err)

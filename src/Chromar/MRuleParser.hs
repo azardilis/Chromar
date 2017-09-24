@@ -1,16 +1,16 @@
 module Chromar.MRuleParser where
 
-import Text.Parsec
-import Data.List
-import Language.Haskell.Meta.Parse
-import Language.Haskell.TH.Syntax
-import Text.Parsec.String (Parser)
-import Text.Parsec.Language (emptyDef)
-import Text.Parsec.Token (makeTokenParser)
+import           Data.List
+import           Language.Haskell.Meta.Parse
+import           Language.Haskell.TH.Syntax
+import           Text.Parsec
+import           Text.Parsec.Language        (emptyDef)
+import           Text.Parsec.String          (Parser)
+import           Text.Parsec.Token           (makeTokenParser)
 
-import qualified Text.Parsec.Token as Tok
+import qualified Text.Parsec.Token           as Tok
 
-import qualified Chromar.RExprs as RE
+import qualified Chromar.RExprs              as RE
 
 type Var = String
 type AttrName = String
@@ -26,19 +26,19 @@ data LAgent =
            [(AttrName, Var)] deriving (Show)
 
 data ARule e = Rule
-    { rlhs :: [LAgent]
-    , rrhs :: [RAgent e]
-    , mults :: [e]  
+    { rlhs  :: [LAgent]
+    , rrhs  :: [RAgent e]
+    , mults :: [e]
     , rexpr :: RE.Er e
     , cexpr :: RE.Er e
     } deriving (Show)
 
 data SRule = SRule
-    { lexps :: [Exp]
-    , rexps :: [Exp]
+    { lexps    :: [Exp]
+    , rexps    :: [Exp]
     , multExps :: [Exp]
-    , srate :: Exp
-    , cond :: Exp
+    , srate    :: Exp
+    , cond     :: Exp
     } deriving (Show)
 
 langDef =
@@ -109,7 +109,7 @@ valDec :: (String, String) -> Dec
 valDec (nm, sexpr) = ValD (VarP $ mkName nm) (NormalB expr) []
   where
     expr = createExp sexpr
-    
+
 whereParser :: Parser [Dec]
 whereParser = do
   op "where"
@@ -138,7 +138,7 @@ parseRule = do
     op "@"
     rexpr <- many1 (noneOf ['['])
     cexpr <- option "'True'" (squares (many1 (noneOf [']'])))
-    return 
+    return
         Rule
         { rlhs = lhs
         , rrhs = ragents
@@ -148,7 +148,7 @@ parseRule = do
         }
 
 --- for testing
-contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> A{x='$f$ x', y={x}} @{1 + 2} [{True}]"
+contents = "A{x=x'}--> A{x='x+1'} @'$na$'"
 
 go = case parse parseRule "rule" contents of
   (Left err) -> error (show err)
