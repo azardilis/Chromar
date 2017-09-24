@@ -108,7 +108,6 @@ mkFnApp fnm args = defElem "apply" ([defElem "csymbol" [textContent fnm]] ++ arg
 class ToXML a where
   toXml :: a -> Content
 
-
 instance ToXML MType where
   toXml MInt = textContent "integer"
   toXml MReal = textContent "real"
