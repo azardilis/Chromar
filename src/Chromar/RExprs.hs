@@ -118,9 +118,9 @@ data Er e
 
 langDef =
     emptyDef
-    { Tok.reservedOpNames = ["$"]
+    { Tok.reservedOpNames = ["$", "repeatEvery", "when", "else", "select", "aggregate"]
     , Tok.reservedNames =
-        ["repeatEvery", "when", "else", "select", "aggregate", "time"]
+        ["repeatEvery", "when", "else", "select", "aggregate"]
     }
 
 lexer :: Tok.TokenParser ()
@@ -179,19 +179,17 @@ mkExp s = case parseExp s of
 
 hExpr :: (String -> e) -> Parser (Er e)
 hExpr f = do
-  Tok.symbol lexer "'"
-  s <- many1 (noneOf ['\''])
-  Tok.symbol lexer "\'"
+  s <- Text.Parsec.between
+            (Tok.symbol lexer "\'")
+            (Tok.symbol lexer "\'")
+            (many1 (noneOf ['\'']))
   let nms = getEsc s
   return $ XExpr nms (f $ rmEscChar s)
-  -- case (f $ rmEscChar s) of
-  --   Left err -> error err
-  --   Right e -> return (XExpr nms e)
 
 parseEr :: (String -> e) -> Parser (Er e)
-parseEr f =
-    (whenExpr f) <|> (repeatExpr f) <|> (obsExpr f) <|> timeExpr <|> (parensExpr f) <|>
-    (hExpr f) <|> (spaceExpr f)
+parseEr f = whiteSpace >>
+    ((whenExpr f) <|> (repeatExpr f) <|> (obsExpr f) <|> timeExpr <|> (parensExpr f) <|>
+    (hExpr f))
 
 whenExpr :: (String -> e) -> Parser (Er e)
 whenExpr f = do
@@ -237,15 +235,12 @@ timeExpr = do
 
 parensExpr :: (String -> e) -> Parser (Er e)
 parensExpr f = do
-    er <- Text.Parsec.between (Tok.symbol lexer "(") (Tok.symbol lexer ")") (parseEr f)
+    er <-
+        Text.Parsec.between
+            (Tok.symbol lexer "(")
+            (Tok.symbol lexer ")")
+            (parseEr f)
     return er
-
-spaceExpr :: (String -> e) -> Parser (Er e)
-spaceExpr f = do
-  whiteSpace
-  er <- parseEr f
-  whiteSpace
-  return er
 
 mkErApp :: Name -> Exp
 mkErApp nm =
