@@ -2,12 +2,13 @@
 
 ### Quick start
 * Install the [stack](https://docs.haskellstack.org/en/stable/README/#how-to-install) tool
-* Install the Chromar library
+* Download and install the Chromar library
 ```
-% cd coloured-petri-nets
+% git clone https://github.com/azardilis/Chromar.git
+% cd Chromar
 % stack install
 ```
-* Investigate things in the repl. (To use conrete syntax rule you'll need to turn on the QuasiQuotes Haskell extension)
+* Investigate things in the repl (to use concrete syntax rule you'll need to turn on the QuasiQuotes Haskell extension)
 ```
 % stack repl
 ghci> :set -XQuasiQuotes
