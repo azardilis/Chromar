@@ -1,16 +1,16 @@
 module Chromar.RuleQuotesE where
 
-import Language.Haskell.TH
-import Language.Haskell.TH.Quote
-import Language.Haskell.TH.Syntax
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Text.ParserCombinators.Parsec
-import Data.List
-import Chromar.MRuleParser
-import Chromar.MAttrs
+import           Chromar.MAttrs
+import           Chromar.MRuleParser
+import           Data.List
+import           Data.Set                      (Set)
+import qualified Data.Set                      as Set
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Quote
+import           Language.Haskell.TH.Syntax
+import           Text.ParserCombinators.Parsec
 
-import qualified Chromar.RExprs as RE
+import qualified Chromar.RExprs                as RE
 
 type FieldProd = (FieldPat, [Exp], Set Name)
 
@@ -25,10 +25,10 @@ tRAgent (RAgent nm attrs) =
         (map (\(aNm, e) -> (mkName aNm, RE.mkErApp' . RE.quoteEr $ e)) attrs)
 
 tRateE :: RE.Er Exp -> Exp
-tRateE = RE.mkErApp' . RE.quoteEr 
+tRateE = RE.mkErApp' . RE.quoteEr
 
 tCondE :: RE.Er Exp -> Exp
-tCondE = RE.mkErApp' . RE.quoteEr 
+tCondE = RE.mkErApp' . RE.quoteEr
 
 {- haskellify the Chromar rule parts
    left agent exprs become Haskell record exprs etc.
@@ -46,7 +46,7 @@ tRule (Rule { rlhs = ls
     , srate = tRateE r
     , cond = tCondE c
     }
-    
+
 rule :: QuasiQuoter
 rule =
     QuasiQuoter
@@ -230,26 +230,27 @@ mkActExp s lhs r = AppE (VarE $ mkName "fullRate") args
 mkReturnStmt :: Exp -> Stmt
 mkReturnStmt = NoBindS
 
+mkFApp' :: Exp -> [Exp] -> Exp
+mkFApp' f [] = undefined
+mkFApp' f (e:exps) = foldr (\x acc -> AppE acc x) (AppE f e) (reverse exps)
+
 mkRxnExp :: Name -> SRule -> Exp
 mkRxnExp s r = RecConE (mkName "Rxn") fields
   where
     lhsSym = mkName "lhs"
     rhsSym = mkName "rhs"
     rateSym = mkName "rate"
-    actSym = mkName "act"
     mrexps =
         AppE
             (VarE $ mkName "nrepl")
             (tuplify2 (ListE $ multExps r) (ListE $ rexps r))
     lexps' = AppE (VarE $ mkName "ms") (ListE $ lexps r)
     rexps' = AppE (VarE $ mkName "ms") (ParensE mrexps)
-    rateExp = srate r
-    actExp = mkActExp s lexps' (srate r)
+    rateExp = mkActExp s lexps' (srate r)
     fields =
         [ (lhsSym, lexps')
         , (rhsSym, rexps')
         , (rateSym, rateExp)
-        , (actSym, actExp)
         ]
 
 mkCompStmts :: Name -> SRule -> Q [Stmt]
@@ -257,9 +258,14 @@ mkCompStmts s r = do
     let rxnExp = mkRxnExp s r
     let retStmt = mkReturnStmt rxnExp
     let guardStmt = NoBindS (cond r)
-    ---let letStmt = LetS (decs r)
+    let lexps' = AppE (VarE $ mkName "ms") (ListE $ lexps r)
+    let actStmt =
+            NoBindS
+                (mkFApp'
+                     (VarE $ mkName ">")
+                     [mkActExp s lexps' (srate r), LitE (IntegerL 0)])
     patStmts <- mkLhs (lexps r)
-    return $ patStmts ++ [guardStmt, retStmt]
+    return $ patStmts ++ [guardStmt, actStmt, retStmt]
 
 ruleQuoter' :: SRule -> Q Exp
 ruleQuoter' r = do
@@ -271,7 +277,7 @@ ruleQuoter' r = do
 fluentTransform :: SRule -> Q SRule
 fluentTransform SRule {lexps = les
                       ,rexps = res
-                      ,multExps = m         
+                      ,multExps = m
                       ,srate = r
                       ,cond = c} = do
     re <- tExp r
@@ -281,7 +287,7 @@ fluentTransform SRule {lexps = les
         SRule
         { lexps = les
         , rexps = tres
-        , multExps = m          
+        , multExps = m
         , srate = re
         , cond = ce
         }
