@@ -14,7 +14,7 @@
 ghci> :set -XQuasiQuotes
 ghci> data Agent = A { x :: Int } deriving (Eq, Show)
 ghci> let state = ms [A{x=1}, A{x=1}, A{x=2}, A{x=3}]
-ghci> let r = [rule| A{x=x} --> A{x=x+1} @x |]
+ghci> let r = [rule| A{x=x} --> A{x='x+1'} @'x' |]
 ghci> let t = 5.0
 ghci> r state t -- get all concrete reactions from rule r at time t at current state
 ```
