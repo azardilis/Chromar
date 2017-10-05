@@ -1,3 +1,11 @@
+module Chromar.Experiment where
+
+{-
+Here we will have convenience functions for running models by evaluating
+enriched expressions at each state. For now these are leftovers from the old
+observables
+-}
+
 applyObs :: [State a] -> [ObsF a] -> [TObs]
 applyObs ss fs =
     [ (t, map ($ s) fs)
