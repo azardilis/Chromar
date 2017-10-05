@@ -1,4 +1,4 @@
-name:                coloured-petri-nets
+name:                chromar
 version:             0.1.0.0
 synopsis:            none
 homepage:            none
@@ -20,12 +20,11 @@ library
   hs-source-dirs:     src
 
   exposed-modules:    Chromar.Core
-                      Chromar.RuleQuotes
-                      Chromar.Fluent
-                      Chromar.Observables
+                      Chromar.RuleQuotesE
                       Chromar.Multiset
                       Chromar.MAttrs
                       Chromar.MRuleParser
+                      Chromar.RExprs
                       Chromar
    
   other-extensions:   BangPatterns

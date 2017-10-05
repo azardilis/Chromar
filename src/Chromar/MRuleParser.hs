@@ -1,22 +1,44 @@
 module Chromar.MRuleParser where
 
-import Text.Parsec
-import Data.List
-import Language.Haskell.Meta.Parse
-import Language.Haskell.TH.Syntax
-import Text.Parsec.String (Parser)
-import Text.Parsec.Language (emptyDef)
-import Text.Parsec.Token (makeTokenParser)
+import           Data.List
+import           Language.Haskell.Meta.Parse
+import           Language.Haskell.TH.Syntax
+import           Text.Parsec
+import           Text.Parsec.Language        (emptyDef)
+import           Text.Parsec.String          (Parser)
+import           Text.Parsec.Token           (makeTokenParser)
 
-import qualified Text.Parsec.Token as Tok
+import qualified Text.Parsec.Token           as Tok
+
+import qualified Chromar.RExprs              as RE
+
+type Var = String
+type AttrName = String
+type Nm = String
+
+data RAgent e =
+    RAgent Nm
+           [(AttrName, RE.Er e)]
+    deriving (Show)
+
+data LAgent =
+    LAgent RE.Nm
+           [(AttrName, Var)] deriving (Show)
+
+data ARule e = Rule
+    { rlhs  :: [LAgent]
+    , rrhs  :: [RAgent e]
+    , mults :: [e]
+    , rexpr :: RE.Er e
+    , cexpr :: RE.Er e
+    } deriving (Show)
 
 data SRule = SRule
-    { lexps :: [Exp]
-    , rexps :: [Exp]
-    , mults :: [Exp]
-    , srate :: Exp
-    , cond :: Exp
-    , decs :: [Dec]  
+    { lexps    :: [Exp]
+    , rexps    :: [Exp]
+    , multExps :: [Exp]
+    , srate    :: Exp
+    , cond     :: Exp
     } deriving (Show)
 
 langDef =
@@ -40,33 +62,40 @@ squares = Tok.squares lexer
 
 whiteSpace = Tok.whiteSpace lexer
 
-attr :: Parser String
-attr = do
+lattr :: Parser (AttrName, Var)
+lattr = do
   attrNm <- name
   op "="
-  expr <- many1 (noneOf ['}', ','])
-  return (attrNm ++ "=" ++ expr)
+  v <- many1 (noneOf ['}', ','])
+  return $ (attrNm, v)
 
-lagent :: Parser String
+rattr :: Parser (AttrName, RE.Er Exp)
+rattr = do
+  attrNm <- name
+  op "="
+  es <- many1 (noneOf ['}', ','])
+  return $ (attrNm, RE.parseErString es)
+
+lagent :: Parser LAgent
 lagent = do
   agentNm <- name
-  attrs <- braces (commaSep attr)
-  return (agentNm ++ "{" ++ intercalate "," attrs ++ "}")
+  attrs <- braces (commaSep lattr)
+  return  $ LAgent agentNm attrs
 
 mult :: Parser String
 mult = braces (many1 (noneOf ['}']))
 
-ragent :: Parser (String, String)
+ragent :: Parser (Exp, RAgent Exp)
 ragent = do
   m <- option "1" mult
   agentNm <- name
-  attrs <- braces (commaSep attr)
-  return (m, agentNm ++ "{" ++ intercalate "," attrs ++ "}")
+  attrs <- braces (commaSep rattr)
+  return (RE.mkExp m, RAgent agentNm attrs)
 
-lhsParser :: Parser [String]
+lhsParser :: Parser [LAgent]
 lhsParser = commaSep lagent
 
-rhsParser :: Parser [(String, String)]
+rhsParser :: Parser [(Exp, RAgent Exp)]
 rhsParser = commaSep ragent
 
 dec :: Parser (String, String)
@@ -80,7 +109,7 @@ valDec :: (String, String) -> Dec
 valDec (nm, sexpr) = ValD (VarP $ mkName nm) (NormalB expr) []
   where
     expr = createExp sexpr
-    
+
 whereParser :: Parser [Dec]
 whereParser = do
   op "where"
@@ -99,29 +128,27 @@ createExps exps =
         Left s -> error s
         Right pexps -> pexps
 
-parseRule :: Parser SRule
+parseRule :: Parser (ARule Exp)
 parseRule = do
     whiteSpace
     lhs <- lhsParser
     op "-->"
     rhs <- rhsParser
-    let (multExps, ragentExps) = unzip rhs
+    let (mults, ragents) = unzip rhs
     op "@"
     rexpr <- many1 (noneOf ['['])
-    cexpr <- option "True" (squares (many1 (noneOf [']'])))
-    wdecs <- option [] whereParser
-    return 
-        SRule
-        { lexps = createExps lhs
-        , rexps = createExps ragentExps
-        , mults = createExps multExps
-        , srate = createExp rexpr
-        , cond = createExp cexpr
-        , decs = wdecs         
+    cexpr <- option "'True'" (squares (many1 (noneOf [']'])))
+    return
+        Rule
+        { rlhs = lhs
+        , rrhs = ragents
+        , mults = mults
+        , rexpr = RE.parseErString rexpr
+        , cexpr = RE.parseErString cexpr
         }
 
 --- for testing
-contents = "A{x=x', y=ygh}, A{x=a, y=m1} --> {2} A{x=f x} @1.0 [x + 1 + 5] where a=1, b=2"
+contents = "A{x=x'}--> A{x='x+1'} @'$na$'"
 
 go = case parse parseRule "rule" contents of
   (Left err) -> error (show err)

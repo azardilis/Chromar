@@ -5,8 +5,6 @@ import qualified Data.Set as S
 import qualified Data.Map as M
 import Chromar.MRuleParser
 
-type Nm = String
-
 data AgentType =
     AgentT Nm
            (S.Set Nm)
@@ -82,10 +80,9 @@ lZipWith f (l:ls) (r:rs) = f l r : lZipWith f ls rs
 fillAttrs :: SRule -> Q SRule
 fillAttrs SRule {lexps = les
                 ,rexps = res
-                ,mults = m         
+                ,multExps = m         
                 ,srate = r
-                ,cond = c
-                ,decs = ds} = do
+                ,cond = c }= do
     info <- reify (mkName "Agent")
     let aTyps = extractIntf info
     les' <- mapM (fPat aTyps) les
@@ -94,8 +91,7 @@ fillAttrs SRule {lexps = les
         SRule
         { lexps = les'
         , rexps = res'
-        , mults = m          
+        , multExps = m          
         , srate = r
         , cond = c
-        , decs = ds         
         }
