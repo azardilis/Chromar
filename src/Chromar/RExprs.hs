@@ -20,6 +20,25 @@ import qualified Text.Parsec.Token             as Tok
 import           Chromar.Core
 import           Chromar.Multiset
 
+type Nm = String
+
+{- syntactic Er's -}
+data Er e
+    = XExpr (Set Name)
+            e
+    | Time
+    | When (Er e)
+           (Er e)
+           (Er e)
+    | Repeat (Er e)
+             (Er e)
+    | Obs Pat
+          Nm
+          (Er e)
+          (Er e)
+    deriving (Show)
+
+{- semantic Er's -}
 data ErF a b = ErF { at :: Multiset a -> Time -> b }
 
 mmod :: Real a => a -> a -> a
@@ -98,23 +117,6 @@ aggregate f i s = foldr f i (toList s)
 
 mkEr :: (Multiset a -> Time -> b) -> ErF a b
 mkEr f = ErF { at = f }
-
-type Nm = String
-
-data Er e
-    = XExpr (Set Name)
-            e
-    | Time
-    | When (Er e)
-           (Er e)
-           (Er e)
-    | Repeat (Er e)
-             (Er e)
-    | Obs Pat
-          Nm
-          (Er e)
-          (Er e)
-    deriving (Show)
 
 langDef =
     emptyDef
@@ -257,7 +259,7 @@ mkErApp' e =
              (VarE $ mkName "t"))
 
 {-
-    takes function and args and returns the expression for
+   takes function and list of args and returns the expression for
    function application to the args
 -}
 mkFApp :: Exp -> [Exp] -> Exp

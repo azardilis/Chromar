@@ -34,26 +34,17 @@ tCondE = RE.mkErApp' . RE.quoteEr
    left agent exprs become Haskell record exprs etc.
 -}
 tRule :: ARule Exp -> SRule
-tRule (Rule { rlhs = ls
-             ,rrhs = rs
-             ,mults = ms
-             ,rexpr = r
-             ,cexpr = c}) =
+tRule (Rule {rlhs = ls
+            ,rrhs = rs
+            ,mults = ms
+            ,rexpr = r
+            ,cexpr = c}) =
     SRule
     { lexps = map tLAgent ls
     , rexps = map tRAgent rs
     , multExps = ms
     , srate = tRateE r
     , cond = tCondE c
-    }
-
-rule :: QuasiQuoter
-rule =
-    QuasiQuoter
-    { quoteExp = ruleQuoter
-    , quotePat = undefined
-    , quoteDec = undefined
-    , quoteType = undefined
     }
 
 --- pure action
@@ -120,101 +111,12 @@ mkLhsStmts sn allStmts (exp:exps) = do
 mkLhs :: [Exp] -> Q [Stmt]
 mkLhs = mkLhsStmts Set.empty []
 
-isEr :: Info -> Bool
-isEr (VarI _ t _ _) = isErT t
-  where
-    isErT (ConT nm) = "ErF" `isSuffixOf` (show nm)
-    isErT (ForallT _ _ tp) = isErT tp
-    isErT (AppT tp _) = isErT tp
-    isErT _ = False
-isEr _ = False
-
 mkErFApp :: Name -> Exp
 mkErFApp nm =
     ParensE
         (AppE
              (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
              (VarE $ mkName "t"))
-
-tStmt :: Stmt -> Q Stmt
-tStmt (BindS p e) = do
-    te <- tExp e
-    return $ BindS p te
-tStmt (NoBindS e) = do
-    te <- tExp e
-    return $ NoBindS te
-
-tMExp :: Maybe Exp -> Q (Maybe Exp)
-tMExp (Just e) = do
-    te <- tExp e
-    return (Just te)
-tMExp Nothing = return Nothing
-
-tName :: Maybe Name -> Exp -> Q Exp
-tName (Just nm) exp = do
-    info <- reify nm
-    if isEr info
-        then return $ mkErFApp nm
-        else return exp
-tName Nothing exp = return exp
-
---- there's probably a better way of doing this
-tExp :: Exp -> Q Exp
-tExp var@(VarE nm) = do
-    mnm <- lookupValueName (show nm)
-    tName mnm var
-tExp (AppE e1 e2) = do
-    te1 <- tExp e1
-    te2 <- tExp e2
-    return $ AppE te1 te2
-tExp (TupE exps) = do
-    texps <- mapM tExp exps
-    return $ TupE texps
-tExp (ListE exps) = do
-    texps <- mapM tExp exps
-    return $ ListE texps
-tExp (UInfixE e1 e2 e3) = do
-    te1 <- tExp e1
-    te2 <- tExp e2
-    te3 <- tExp e3
-    return $ UInfixE te1 te2 te3
-tExp (ParensE e) = do
-    te <- tExp e
-    return $ ParensE te
-tExp (LamE pats e) = do
-    te <- tExp e
-    return $ LamE pats te
-tExp (CompE stmts) = do
-    tstmts <- mapM tStmt stmts
-    return $ CompE tstmts
-tExp (InfixE me1 e me2) = do
-    tme1 <- tMExp me1
-    te <- tExp e
-    tme2 <- tMExp me2
-    return $ InfixE tme1 te tme2
-tExp (LitE lit) = return $ LitE lit
-tExp (ConE nm) = return $ ConE nm
-tExp (RecConE nm fexps) = do
-    tfexps <- mapM tFExp fexps
-    return $ RecConE nm tfexps
-tExp _ = undefined
-
-tFExp :: FieldExp -> Q FieldExp
-tFExp (nm, exp) = do
-    te <- tExp exp
-    return (nm, te)
-
-tBody :: Body -> Q Body
-tBody (NormalB exp) = do
-  te <- tExp exp
-  return (NormalB te)
-tBody _ = error "expected NormalB constr"
-
-tDec :: Dec -> Q Dec
-tDec (ValD p bd xs) = do
-  tbd <- tBody bd
-  return (ValD p tbd xs)
-tDec _ = error "expected ValD constr"
 
 tuplify :: Name -> Exp -> Exp -> Exp
 tuplify s lhs r = TupE [lhs, VarE s, r]
@@ -247,11 +149,7 @@ mkRxnExp s r = RecConE (mkName "Rxn") fields
     lexps' = AppE (VarE $ mkName "ms") (ListE $ lexps r)
     rexps' = AppE (VarE $ mkName "ms") (ParensE mrexps)
     rateExp = mkActExp s lexps' (srate r)
-    fields =
-        [ (lhsSym, lexps')
-        , (rhsSym, rexps')
-        , (rateSym, rateExp)
-        ]
+    fields = [(lhsSym, lexps'), (rhsSym, rexps'), (rateSym, rateExp)]
 
 mkCompStmts :: Name -> SRule -> Q [Stmt]
 mkCompStmts s r = do
@@ -274,34 +172,26 @@ ruleQuoter' r = do
     stmts <- mkCompStmts state r
     return $ LamE [VarP state, VarP time] (CompE stmts)
 
-fluentTransform :: SRule -> Q SRule
-fluentTransform SRule {lexps = les
-                      ,rexps = res
-                      ,multExps = m
-                      ,srate = r
-                      ,cond = c} = do
-    re <- tExp r
-    ce <- tExp c
-    tres <- mapM tExp res
-    return
-        SRule
-        { lexps = les
-        , rexps = tres
-        , multExps = m
-        , srate = re
-        , cond = ce
-        }
-
 ruleQuoter :: String -> Q Exp
 ruleQuoter s =
     case parse parseRule "" s of
         Left err -> error (show err)
         Right r -> do
-          let sr = tRule r
-          sr' <- fillAttrs sr
-          ruleQuoter' sr'
+            let sr = tRule r
+            sr' <- fillAttrs sr
+            ruleQuoter' sr'
 
+rule :: QuasiQuoter
+rule =
+    QuasiQuoter
+    { quoteExp = ruleQuoter
+    , quotePat = undefined
+    , quoteDec = undefined
+    , quoteType = undefined
+    }
+
+--- for testing
 ruleQuoter'' :: String -> Q Exp
 ruleQuoter'' s = do
-  info <- reify (mkName $ s)
-  stringE (show info)
+    info <- reify (mkName $ s)
+    stringE (show info)

@@ -1,9 +1,9 @@
 module Chromar.MAttrs where
 
-import Language.Haskell.TH
-import qualified Data.Set as S
-import qualified Data.Map as M
-import Chromar.MRuleParser
+import           Chromar.MRuleParser
+import qualified Data.Map            as M
+import qualified Data.Set            as S
+import           Language.Haskell.TH
 
 data AgentType =
     AgentT Nm
@@ -80,9 +80,9 @@ lZipWith f (l:ls) (r:rs) = f l r : lZipWith f ls rs
 fillAttrs :: SRule -> Q SRule
 fillAttrs SRule {lexps = les
                 ,rexps = res
-                ,multExps = m         
+                ,multExps = m
                 ,srate = r
-                ,cond = c }= do
+                ,cond = c} = do
     info <- reify (mkName "Agent")
     let aTyps = extractIntf info
     les' <- mapM (fPat aTyps) les
@@ -91,7 +91,7 @@ fillAttrs SRule {lexps = les
         SRule
         { lexps = les'
         , rexps = res'
-        , multExps = m          
+        , multExps = m
         , srate = r
         , cond = c
         }
