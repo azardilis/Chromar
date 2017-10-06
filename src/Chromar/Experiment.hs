@@ -1,83 +1,63 @@
 module Chromar.Experiment where
 
 {-
-Here we will have convenience functions for running models by evaluating
-enriched expressions at each state. For now these are leftovers from the old
-observables
+Convenience functions for running models
 -}
 
-applyObs :: [State a] -> [ObsF a] -> [TObs]
-applyObs ss fs =
-    [ (t, map ($ s) fs)
-    | (State s t _) <- ss ]
+import           Chromar.Core
+import           Chromar.Multiset
+import           Chromar.RExprs
+import           Data.List
+import qualified System.Random    as R
 
-formatFloatN numOfDecimals floatNum =
-    showFFloat (Just numOfDecimals) floatNum ""
+class ToSpaceSep a  where
+    toSpaceSep :: a -> String
 
-printObs
-    :: (Show a)
-    => [State a] -> [Observable a] -> IO ()
-printObs ss fs = do
-    putStrLn header
-    showObs obs
-  where
-    obs = applyObs ss (gens fs)
-    obsNames = names fs
-    header = unwords ("time" : obsNames)
+instance ToSpaceSep Int where
+    toSpaceSep i = show i
 
-show' :: TObs -> IO ()
-show' tobs = putStrLn $ showTObs tobs
+instance ToSpaceSep Double where
+    toSpaceSep d = show d
 
-showObs :: [TObs] -> IO ()
-showObs = mapM_ show'
+instance (Show a1, Show a2) =>
+         ToSpaceSep (a1, a2) where
+    toSpaceSep (v1, v2) = show v1 ++ " " ++ show v2
 
-showTObs :: TObs -> String
-showTObs (t, obss) = show t ++ " " ++ obssS
-  where
-    obssS = unwords (map show obss)
+instance (Show a1, Show a2, Show a3) =>
+         ToSpaceSep (a1, a2, a3) where
+    toSpaceSep (v1, v2, v3) = show v1 ++ " " ++ show v2 ++ " " ++ show v3
 
-writeObs
-    :: (Show a)
-    => FilePath -> [Observable a] -> [State a] -> IO ()
-writeObs fn fs ss = writeFile fn (unlines obsS)
-  where
-    obs = applyObs ss (gens fs)
-    obsNames = names fs
-    header = unwords ("time" : obsNames)
-    obsS = header : map showTObs obs
+instance (Show a1, Show a2, Show a3, Show a4) =>
+         ToSpaceSep (a1, a2, a3, a4) where
+    toSpaceSep (v1, v2, v3, v4) =
+        show v1 ++ " " ++ show v2 ++ " " ++ show v3 ++ " " ++ show v3
+
+applyEr :: ErF a b -> State a -> b
+applyEr er (State m t n) = at er m t
 
 run
-    :: (Eq a, Show a)
-    => Model a -> Int -> [Observable a] -> IO ()
+    :: (Eq a, ToSpaceSep b)
+    => Model a -> Int -> ErF a b -> IO ()
 run (Model {rules = rs
-           ,initState = s}) n obss = do
+           ,initState = s}) n er = do
     rgen <- R.getStdGen
-    let traj = take n (simulate rgen rs s)
-    printObs traj obss
+    let traj = map (applyEr er) $ take n (simulate rgen rs s)
+    mapM_ (putStrLn . toSpaceSep) traj
 
 runW
-    :: (Eq a, Show a)
-    => Model a -> Int -> FilePath -> [Observable a] -> IO ()
+    :: (Eq a, ToSpaceSep b)
+    => Model a -> Int -> FilePath -> ErF a b -> IO ()
 runW (Model {rules = rs
-            ,initState = s}) n fn obss = do
-    rgen <- R.getStdGen
-    let traj = take n (simulate rgen rs s)
-    writeObs fn obss traj
+            ,initState = s}) n fn obss = undefined
 
 runT
-    :: (Eq a, Show a)
-    => Model a -> Time -> [Observable a] -> IO ()
+    :: (Eq a, ToSpaceSep b)
+    => Model a -> Time -> ErF a b -> IO ()
 runT (Model {rules = rs
-            ,initState = s}) t obss = do
-    rgen <- R.getStdGen
-    let traj = takeWhile (\s -> getT s < t) (simulate rgen rs s)
-    printObs traj obss
+            ,initState = s}) t obss = undefined
 
 runTW
-    :: (Eq a, Show a)
-    => Model a -> Time -> FilePath -> [Observable a] -> IO ()
+    :: (Eq a, ToSpaceSep b)
+    => Model a -> Time -> FilePath -> ErF a b -> IO ()
 runTW (Model {rules = rs
-             ,initState = s}) t fn obss = do
-    rgen <- R.getStdGen
-    let traj = takeWhile (\s -> getT s < t) (simulate rgen rs s)
-    writeObs fn obss traj
+             ,initState = s}) t fn obss = undefined

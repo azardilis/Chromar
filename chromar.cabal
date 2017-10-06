@@ -25,6 +25,7 @@ library
                       Chromar.MAttrs
                       Chromar.MRuleParser
                       Chromar.RExprs
+                      Chromar.Experiment
                       Chromar
    
   other-extensions:   BangPatterns
