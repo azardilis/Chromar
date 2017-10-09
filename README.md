@@ -6,7 +6,7 @@
 ```
 % git clone https://github.com/azardilis/Chromar.git
 % cd Chromar
-% stack install
+% stack build
 ```
 * Investigate things in the repl (to use concrete syntax rule you'll need to turn on the QuasiQuotes Haskell extension)
 ```
