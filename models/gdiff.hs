@@ -1,35 +1,19 @@
-{-# LANGUAGE  QuasiQuotes #-}
-{-# LANGUAGE  TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes     #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
-import Chromar
+import           Chromar
 
 --- Agents
 data Agent = C
-    { cid :: Int
+    { cid    :: Int
     , nextTo :: Int
-    , x :: Double
+    , x      :: Double
     } deriving (Eq, Show)
-
-idx :: Agent -> Int
-idx (C{cid=i, nextTo=_, x=_}) = i
-
-isC :: Agent -> Bool
-isC _     = True
 
 f = fromIntegral . floor
 c = fromIntegral . ceiling
-
-cv :: Multiset Agent -> Obs
-cv m = sd obss
-  where
-    obss = map (\(el, _) -> x el) m
-
-sd :: [Double] -> Obs
-sd m = sqrt ((sum [(obs - mean)^^2 | obs <- m]) / n) where
-  n       = fromIntegral $ length m
-  mean = (sum m) / n
 
 g :: Double -> Double
 g s = gmax * (s / (ks + s))
@@ -37,51 +21,46 @@ g s = gmax * (s / (ks + s))
     gmax = 0.25
     ks = 2.5
 
-s = repeatEvery 10.0 (between 0.0 5.0 (constant smax) (constant 0.0))
+between t0 t1 t = t >= t0 && t <= t1
+
+sf = [er| repeatEvery '10.0' (when 'between 0.0 5.0 $time$' 'smax' else '0.0') |]
   where
     smax = 10.0
 
-nc =
-    Observable
-    { name = "ncells"
-    , gen = aggregate ((+) . const 1.0) 0.0 . select isC
-    }
-    
-conc1 =
-    Observable
-    { name = "conc1"
-    , gen = aggregate ((+) . x) 0.0 . select (\at -> idx at == 1)
-    }
-    
-total =
-    Observable
-    { name = "total"
-    , gen = aggregate ((+) . x) 0.0 . select isC
-    }
+conc1 = [er| select C{cid=i, nextTo=k, x=x};
+             aggregate (conc1 . 'if i==1 then conc1 + x
+                                 else 0.0')
+                       '0' |]
 
-var =
-    Observable
-    { name = "var"
-    , gen = cv . select isC
-    }
+total = [er| select C{cid=i, nextTo=k, x=x}; aggregate (conc . 'conc + x') '0' |]
+
+n = [er| select C{cid=i, nextTo=k, x=x}; aggregate (count . 'count + 1') '0' |]
+
+mean = [er| '$total$ / $n$' |]
+
+sd = [er| select C{cid=i, nextTo=k, x=x};
+          aggregate (acc . 'acc + (x - $mean$)^^2') '0' |]
+
+var = [er| '$sd$ / $n$' |]
 
 $(return [])
 
 --- Rules
 df = [rule|
-       C{nextTo=p, x=x}, C{cid=p, x=x'}  -->
-       C{nextTo=p, x=x-1}, C{cid=p, x=x'+1}  @x [x>0]
+       C{nextTo=p, x=x}, C{cid=p, x=y}  -->
+       C{nextTo='p', x='x-1'}, C{cid='p', x='y+1'}  @'x' ['x>0']
      |]
 
 df' = [rule|
-       C{cid=p, x=x'}, C{nextTo=p, x=x}   -->
-       C{cid=p, x=x'-1}, C{nextTo=p, x=x+1} @x' [x'>0]
+       C{cid=p, x=y}, C{nextTo=p, x=x}   -->
+       C{cid='p', x='y-1'}, C{nextTo='p', x='x+1'} @'y' ['y>0']
      |]
 
 growth =
     [rule|
            C{nextTo=p, x=x} -->
-           C{nextTo=round nc+1, x=f (x/2.0)}, C{cid=round nc+1, nextTo=p, x=c (x/2.0)} @(g s)
+           C{nextTo='round $n$+1', x='f (x/2.0)'}, C{cid='round $n$+1', nextTo='p', x='c (x/2.0)'}
+           @'g $sf$'
          |]
 
 --- Initial state
@@ -101,4 +80,10 @@ model = Model { rules     = [df, df', growth],
                 initState = s0 }
 
 main :: IO ()
-main = runTW model 20.0 "out/out.txt" [nc, var, conc1]
+main =
+    runTW
+        model
+        20.0
+        "out/out.txt"
+        ["t", "n", "var", "conc1"]
+        (zipEr4 time n var conc1)
