@@ -30,7 +30,24 @@ instance (Show a1, Show a2, Show a3) =>
 instance (Show a1, Show a2, Show a3, Show a4) =>
          ToSpaceSep (a1, a2, a3, a4) where
     toSpaceSep (v1, v2, v3, v4) =
-        show v1 ++ " " ++ show v2 ++ " " ++ show v3 ++ " " ++ show v3
+        show v1 ++ " " ++ show v2 ++ " " ++ show v3 ++ " " ++ show v4
+
+instance (Show a1, Show a2, Show a3, Show a4, Show a5) =>
+         ToSpaceSep (a1, a2, a3, a4, a5) where
+    toSpaceSep (v1, v2, v3, v4, v5) =
+        show v1 ++
+        " " ++ show v2 ++ " " ++ show v3 ++ " " ++ show v4 ++ " " ++ show v5
+
+instance (Show a1, Show a2, Show a3, Show a4, Show a5, Show a6) =>
+         ToSpaceSep (a1, a2, a3, a4, a5, a6) where
+    toSpaceSep (v1, v2, v3, v4, v5, v6) =
+        show v1 ++
+        " " ++
+        show v2 ++
+        " " ++ show v3 ++ " " ++ show v4 ++ " " ++ show v5 ++ " " ++ show v6
+
+instance (Show a) => ToSpaceSep [a] where
+  toSpaceSep xs = intercalate " " (map show xs)
 
 applyEr :: Er a b -> State a -> b
 applyEr er (State m t n) = at er m t
@@ -46,18 +63,32 @@ run (Model {rules = rs
 
 runW
     :: (Eq a, ToSpaceSep b)
-    => Model a -> Int -> FilePath -> Er a b -> IO ()
+    => Model a -> Int -> FilePath -> [String] -> Er a b -> IO ()
 runW (Model {rules = rs
-            ,initState = s}) n fn obss = undefined
+            ,initState = s}) n fn nms er = do
+    rgen <- R.getStdGen
+    let traj = map (applyEr er) $ take n (simulate rgen rs s)
+    let header = toSpaceSep nms
+    let rows = header : (map toSpaceSep traj)
+    writeFile fn (unlines rows)
 
 runT
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> Er a b -> IO ()
 runT (Model {rules = rs
-            ,initState = s}) t obss = undefined
+            ,initState = s}) t er = do
+  rgen <- R.getStdGen
+  let traj = map (applyEr er) $ takeWhile (\s -> getT s < t) (simulate rgen rs s)
+  mapM_ (putStrLn . toSpaceSep) traj
+
 
 runTW
     :: (Eq a, ToSpaceSep b)
-    => Model a -> Time -> FilePath -> Er a b -> IO ()
+    => Model a -> Time -> FilePath -> [String] -> Er a b -> IO ()
 runTW (Model {rules = rs
-             ,initState = s}) t fn obss = undefined
+             ,initState = s}) t fn nms er = do
+  rgen <- R.getStdGen
+  let traj = map (applyEr er) $ takeWhile (\s -> getT s < t) (simulate rgen rs s)
+  let header = toSpaceSep nms
+  let rows = header : (map toSpaceSep traj)
+  writeFile fn (unlines rows)
