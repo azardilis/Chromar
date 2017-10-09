@@ -32,12 +32,12 @@ instance (Show a1, Show a2, Show a3, Show a4) =>
     toSpaceSep (v1, v2, v3, v4) =
         show v1 ++ " " ++ show v2 ++ " " ++ show v3 ++ " " ++ show v3
 
-applyEr :: ErF a b -> State a -> b
+applyEr :: Er a b -> State a -> b
 applyEr er (State m t n) = at er m t
 
 run
     :: (Eq a, ToSpaceSep b)
-    => Model a -> Int -> ErF a b -> IO ()
+    => Model a -> Int -> Er a b -> IO ()
 run (Model {rules = rs
            ,initState = s}) n er = do
     rgen <- R.getStdGen
@@ -46,18 +46,18 @@ run (Model {rules = rs
 
 runW
     :: (Eq a, ToSpaceSep b)
-    => Model a -> Int -> FilePath -> ErF a b -> IO ()
+    => Model a -> Int -> FilePath -> Er a b -> IO ()
 runW (Model {rules = rs
             ,initState = s}) n fn obss = undefined
 
 runT
     :: (Eq a, ToSpaceSep b)
-    => Model a -> Time -> ErF a b -> IO ()
+    => Model a -> Time -> Er a b -> IO ()
 runT (Model {rules = rs
             ,initState = s}) t obss = undefined
 
 runTW
     :: (Eq a, ToSpaceSep b)
-    => Model a -> Time -> FilePath -> ErF a b -> IO ()
+    => Model a -> Time -> FilePath -> Er a b -> IO ()
 runTW (Model {rules = rs
              ,initState = s}) t fn obss = undefined

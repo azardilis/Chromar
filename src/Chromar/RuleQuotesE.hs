@@ -24,10 +24,10 @@ tRAgent (RAgent nm attrs) =
         (mkName nm)
         (map (\(aNm, e) -> (mkName aNm, RE.mkErApp' . RE.quoteEr $ e)) attrs)
 
-tRateE :: RE.Er Exp -> Exp
+tRateE :: RE.SEr Exp -> Exp
 tRateE = RE.mkErApp' . RE.quoteEr
 
-tCondE :: RE.Er Exp -> Exp
+tCondE :: RE.SEr Exp -> Exp
 tCondE = RE.mkErApp' . RE.quoteEr
 
 {- haskellify the Chromar rule parts

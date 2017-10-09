@@ -23,68 +23,68 @@ import           Chromar.Multiset
 type Nm = String
 
 {- syntactic Er's -}
-data Er e
+data SEr e
     = XExpr (Set Name)
             e
     | Time
-    | When (Er e)
-           (Er e)
-           (Er e)
-    | Repeat (Er e)
-             (Er e)
+    | When (SEr e)
+           (SEr e)
+           (SEr e)
+    | Repeat (SEr e)
+             (SEr e)
     | Obs Pat
           Nm
-          (Er e)
-          (Er e)
+          (SEr e)
+          (SEr e)
     deriving (Show)
 
 {- semantic Er's -}
-data ErF a b = ErF { at :: Multiset a -> Time -> b }
+data Er a b = Er { at :: Multiset a -> Time -> b }
 
 mmod :: Real a => a -> a -> a
 mmod n m
   | m <=0 = 0
   | otherwise = mod' n m
 
-zipEr2 :: ErF a b -> ErF a c -> ErF a (b, c)
+zipEr2 :: Er a b -> Er a c -> Er a (b, c)
 zipEr2 e1 e2 =
-    ErF
+    Er
     { at = \s t -> (at e1 s t, at e2 s t)
     }
 
-zipEr3 :: ErF a b -> ErF a c -> ErF a d -> ErF a (b, c, d)
+zipEr3 :: Er a b -> Er a c -> Er a d -> Er a (b, c, d)
 zipEr3 e1 e2 e3 =
-    ErF
+    Er
     { at = \s t -> (at e1 s t, at e2 s t, at e3 s t)
     }
 
-zipEr4 :: ErF a b -> ErF a b1 -> ErF a b2 -> ErF a b3 -> ErF a (b, b1, b2, b3)
+zipEr4 :: Er a b -> Er a b1 -> Er a b2 -> Er a b3 -> Er a (b, b1, b2, b3)
 zipEr4 e1 e2 e3 e4 =
-    ErF
+    Er
     { at = \s t -> (at e1 s t, at e2 s t, at e3 s t, at e4 s t)
     }
 
 zipEr5
-    :: ErF a b
-    -> ErF a b1
-    -> ErF a b2
-    -> ErF a b3
-    -> ErF a b4
-    -> ErF a (b, b1, b2, b3, b4)
+    :: Er a b
+    -> Er a b1
+    -> Er a b2
+    -> Er a b3
+    -> Er a b4
+    -> Er a (b, b1, b2, b3, b4)
 zipEr5 e1 e2 e3 e4 e5 =
-    ErF
+    Er
     { at = \s t -> (at e1 s t, at e2 s t, at e3 s t, at e4 s t, at e5 s t)
     }
 
-repeatEvery :: ErF a Time -> ErF a b -> ErF a b
+repeatEvery :: Er a Time -> Er a b -> Er a b
 repeatEvery et er =
-    ErF
+    Er
     { at = \s t -> at er s (mmod t (at et s t))
     }
 
-when :: ErF a Bool -> ErF a b -> ErF a (Maybe b)
+when :: Er a Bool -> Er a b -> Er a (Maybe b)
 when eb er =
-    ErF
+    Er
     { at =
         \s t ->
              if at eb s t
@@ -92,20 +92,20 @@ when eb er =
                  else Nothing
     }
 
-orElse :: ErF a (Maybe b) -> ErF a b -> ErF a b
+orElse :: Er a (Maybe b) -> Er a b -> Er a b
 e1 `orElse` e2 =
-    ErF
+    Er
     { at = \s t -> fromMaybe (at e2 s t) (at e1 s t)
     }
 
 time =
-    ErF
+    Er
     { at = \s t -> t
     }
 
-obs :: (a -> Bool) -> ErF a (a -> b -> b) -> ErF a b -> ErF a b
+obs :: (a -> Bool) -> Er a (a -> b -> b) -> Er a b -> Er a b
 obs f comb i =
-    ErF
+    Er
     { at = \s t -> aggregate (at comb s t) (at i s t) . select f $ s
     }
 
@@ -115,8 +115,8 @@ select f = filter (\(el, _) -> f el)
 aggregate :: (a -> b -> b) -> b -> Multiset a -> b
 aggregate f i s = foldr f i (toList s)
 
-mkEr :: (Multiset a -> Time -> b) -> ErF a b
-mkEr f = ErF { at = f }
+mkEr :: (Multiset a -> Time -> b) -> Er a b
+mkEr f = Er { at = f }
 
 langDef =
     emptyDef
@@ -179,7 +179,7 @@ mkExp s = case parseExp s of
   (Left err) -> error err
   (Right e) -> e
 
-hExpr :: (String -> e) -> Parser (Er e)
+hExpr :: (String -> e) -> Parser (SEr e)
 hExpr f = do
   s <- Text.Parsec.between
             (Tok.symbol lexer "\'")
@@ -188,12 +188,12 @@ hExpr f = do
   let nms = getEsc s
   return $ XExpr nms (f $ rmEscChar s)
 
-parseEr :: (String -> e) -> Parser (Er e)
+parseEr :: (String -> e) -> Parser (SEr e)
 parseEr f = whiteSpace >>
     ((whenExpr f) <|> (repeatExpr f) <|> (obsExpr f) <|> timeExpr <|> (parensExpr f) <|>
     (hExpr f))
 
-whenExpr :: (String -> e) -> Parser (Er e)
+whenExpr :: (String -> e) -> Parser (SEr e)
 whenExpr f = do
   op "when"
   er1 <- parseEr f
@@ -202,21 +202,21 @@ whenExpr f = do
   er3 <- parseEr f
   return $ When er1 er2 er3
 
-repeatExpr :: (String -> e) -> Parser (Er e)
+repeatExpr :: (String -> e) -> Parser (SEr e)
 repeatExpr f = do
   op "repeatEvery"
   er1 <- parseEr f
   er2 <- parseEr f
   return $ Repeat er1 er2
 
-foldExpr :: (String -> e) -> Parser (Nm, Er e)
+foldExpr :: (String -> e) -> Parser (Nm, SEr e)
 foldExpr f = do
   nm <- Tok.identifier lexer
   Tok.symbol lexer "."
   er <- parseEr f
   return $ (nm, er)
 
-obsExpr :: (String -> e) -> Parser (Er e)
+obsExpr :: (String -> e) -> Parser (SEr e)
 obsExpr f = do
     op "select"
     lat <- lagent
@@ -230,12 +230,12 @@ obsExpr f = do
     er2 <- parseEr f
     return $ Obs (parseP lat) nm er1 er2
 
-timeExpr :: Parser (Er e)
+timeExpr :: Parser (SEr e)
 timeExpr = do
   op "time"
   return Time
 
-parensExpr :: (String -> e) -> Parser (Er e)
+parensExpr :: (String -> e) -> Parser (SEr e)
 parensExpr f = do
     er <-
         Text.Parsec.between
@@ -348,7 +348,7 @@ mkObsExp' pat nm combE initE = AppE (VarE $ mkName "mkEr") (LetE decs e)
                  (VarE $ mkName "go")
                  [mkSelect pat, mkErApp' initE, stExp, timeExp])
 
-quoteEr :: Er Exp -> Exp
+quoteEr :: SEr Exp -> Exp
 quoteEr Time = VarE $ mkName "time"
 quoteEr (XExpr nms e) = AppE (VarE $ mkName "mkEr") (mkLiftExp nms e)
 quoteEr (When er1 er2 er3) = mkWhenExp (quoteEr er1) (quoteEr er2) (quoteEr er3)
@@ -379,7 +379,7 @@ go = case parse (parseEr mkExp) "er" contents' of
   (Left err) -> error (show err)
   (Right val) -> val
 
-parseErString :: String -> Er Exp
+parseErString :: String -> SEr Exp
 parseErString s = case parse (parseEr mkExp) "er" s of
   (Left err) -> error (show err)
   (Right val) -> val

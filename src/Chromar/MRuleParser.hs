@@ -18,7 +18,7 @@ type Nm = String
 
 data RAgent e =
     RAgent Nm
-           [(AttrName, RE.Er e)]
+           [(AttrName, RE.SEr e)]
     deriving (Show)
 
 data LAgent =
@@ -29,8 +29,8 @@ data ARule e = Rule
     { rlhs  :: [LAgent]
     , rrhs  :: [RAgent e]
     , mults :: [e]
-    , rexpr :: RE.Er e
-    , cexpr :: RE.Er e
+    , rexpr :: RE.SEr e
+    , cexpr :: RE.SEr e
     } deriving (Show)
 
 data SRule = SRule
@@ -69,7 +69,7 @@ lattr = do
   v <- many1 (noneOf ['}', ','])
   return $ (attrNm, v)
 
-rattr :: Parser (AttrName, RE.Er Exp)
+rattr :: Parser (AttrName, RE.SEr Exp)
 rattr = do
   attrNm <- name
   op "="
