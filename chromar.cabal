@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 16501466c7b94f67b7847e584184d2a2b96362f8748b64d647239f4f029fc1c2
+-- hash: c053f6614015094857efea846291e7a7e0acc84bc1b99ef0380ed464bc4a0c36
 
 name:                chromar
 version:             0.1.0.0
@@ -37,4 +37,32 @@ library
     Chromar
   other-modules:
     Paths_chromar
+  default-language: Haskell2010
+
+test-suite gdiff
+  type: exitcode-stdio-1.0
+  main-is: gdiff.hs
+  other-modules:
+    Paths_chromar
+  hs-source-dirs:
+    models
+  other-extensions: BangPatterns
+  build-depends:
+    base,
+    chromar,
+    containers
+  default-language: Haskell2010
+
+test-suite simple
+  type: exitcode-stdio-1.0
+  main-is: simple.hs
+  other-modules:
+    Paths_chromar
+  hs-source-dirs:
+    models
+  other-extensions: BangPatterns
+  build-depends:
+    base,
+    chromar,
+    containers
   default-language: Haskell2010

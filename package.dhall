@@ -37,4 +37,22 @@
         , "Chromar"
         ]
     }
+, tests =
+    { gdiff =
+        { dependencies =
+            [ "base", "chromar" ]
+        , main =
+            "gdiff.hs"
+        , source-dirs =
+            "models"
+        }
+    , simple =
+        { dependencies =
+            [ "base", "chromar" ]
+        , main =
+            "simple.hs"
+        , source-dirs =
+            "models"
+        }
+    }
 }

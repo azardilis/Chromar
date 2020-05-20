@@ -43,3 +43,9 @@ jobs:
       run: |
         cabal v2-update
         cabal v2-build all --enable-tests
+
+    - name: simple
+      run: cabal v2-test simple --test-show-details=direct --test-option="--color=always"
+
+    - name: gdiff
+      run: cabal v2-test gdiff --test-show-details=direct --test-option="--color=always"
