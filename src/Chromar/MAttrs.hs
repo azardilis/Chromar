@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Chromar.MAttrs where
 
 import           Chromar.MRuleParser
@@ -30,7 +32,13 @@ getType (RecC nm ifce) = AgentT (nameBase nm) (S.fromList fNames)
 getType _ = error "Expected records"
 
 extractIntf :: Info -> [AgentType]
-extractIntf (TyConI (DataD _ _ _ cons _)) = map getType cons
+extractIntf
+#if __GLASGOW_HASKELL__ < 800
+    (TyConI (DataD _ _ _ cons _))
+#else
+    (TyConI (DataD _ _ _ _ cons _))
+#endif
+    = map getType cons
 extractIntf _ = error "Expected type constructor"
 
 createMFExp :: Nm -> Q FieldExp

@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Chromar.RuleQuotesE where
 
 import           Chromar.MAttrs
@@ -119,10 +121,18 @@ mkErFApp nm =
              (VarE $ mkName "t"))
 
 tuplify :: Name -> Exp -> Exp -> Exp
+#if __GLASGOW_HASKELL__ < 810
 tuplify s lhs r = TupE [lhs, VarE s, r]
+#else
+tuplify s lhs r = TupE [Just lhs, Just $ VarE s, Just r]
+#endif
 
 tuplify2 :: Exp -> Exp -> Exp
+#if __GLASGOW_HASKELL__ < 810
 tuplify2 m ar = TupE [m, ar]
+#else
+tuplify2 m ar = TupE [Just m, Just ar]
+#endif
 
 mkActExp :: Name -> Exp -> Exp -> Exp
 mkActExp s lhs r = AppE (VarE $ mkName "fullRate") args

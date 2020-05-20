@@ -1,6 +1,4 @@
-{ verbatim =
-    { cabal-version = ">= 1.8" }
-, name =
+{ name =
     "chromar"
 , version =
     "0.1.0.0"
@@ -12,8 +10,6 @@
     "none"
 , maintainer =
     "none"
-, ghc-options =
-    "-02"
 , other-extensions =
     "BangPatterns"
 , dependencies =
@@ -23,12 +19,12 @@
         "src"
     , dependencies =
         [ "base"
-        , "random >=1.1 && <1.2"
-        , "parsec >=3.1 && <3.2"
-        , "template-haskell >=2.10 && <2.12"
-        , "haskell-src-meta >= 0.6"
-        , "containers >=0.5"
-        , "multiset >= 0.3"
+        , "random"
+        , "parsec"
+        , "template-haskell"
+        , "haskell-src-meta"
+        , "containers"
+        , "multiset"
         ]
     , exposed-modules =
         [ "Chromar.Core"

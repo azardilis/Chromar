@@ -1,10 +1,10 @@
-cabal-version: >= 1.8
+cabal-version: 1.12
 
 -- This file has been generated from package.dhall by hpack version 0.31.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8244e63fc72818a28fc91b473225753c5fa0f63181de7016197bb4ed381a2732
+-- hash: 16501466c7b94f67b7847e584184d2a2b96362f8748b64d647239f4f029fc1c2
 
 name:                chromar
 version:             0.1.0.0
@@ -17,13 +17,12 @@ build-type:          Simple
 library
   build-depends:
     base,
-    containers >=0.5,
-    haskell-src-meta >=0.6,
-    multiset >=0.3,
-    parsec >=3.1 && <3.2,
-    random >=1.1 && <1.2,
-    template-haskell >=2.10 && <2.12
-  ghc-options: -02
+    containers,
+    haskell-src-meta,
+    multiset,
+    parsec,
+    random,
+    template-haskell
   hs-source-dirs:
     src
   other-extensions: BangPatterns

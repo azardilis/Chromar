@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Chromar.RExprs where
 
 import           Data.Fixed
@@ -289,7 +291,12 @@ lExp nms var@(VarE nm) =
         then mkErApp nm
         else var
 lExp nms (AppE e1 e2) = AppE (lExp nms e1) (lExp nms e2)
-lExp nms (TupE exps) = TupE (map (lExp nms) exps)
+lExp nms (TupE exps) =
+#if __GLASGOW_HASKELL__ < 810
+    TupE (map (lExp nms) exps)
+#else
+    TupE (Just <$> map (lExp nms) (catMaybes exps))
+#endif
 lExp nms (ListE exps) = ListE (map (lExp nms) exps)
 lExp nms (UInfixE e1 e2 e3) = UInfixE (lExp nms e1) (lExp nms e2) (lExp nms e3)
 lExp nms (ParensE e) = ParensE (lExp nms e)
