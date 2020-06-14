@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c053f6614015094857efea846291e7a7e0acc84bc1b99ef0380ed464bc4a0c36
+-- hash: 693e008a7c0b0f824dcc79eca43cfcebacd8a9dab37288c055b3f45e5f57ef6a
 
 name:                chromar
 version:             0.1.0.0
@@ -23,9 +23,25 @@ library
     parsec,
     random,
     template-haskell
+  if impl(ghc >= 8.10.0)
+    other-modules:
+      Internal.RuleQuotes
+    hs-source-dirs:
+      src-ghc-8.10
+  if impl(ghc >= 8.8.0) && impl(ghc < 8.10.0)
+    other-modules:
+      Internal.RuleQuotes
+    hs-source-dirs:
+      src-ghc-8.8
+  if impl(ghc >= 8.6.0) && impl(ghc < 8.8.0)
+    other-modules:
+      Internal.RuleQuotes
+    hs-source-dirs:
+      src-ghc-8.6
   hs-source-dirs:
     src
   other-extensions: BangPatterns
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   exposed-modules:
     Chromar.Core
     Chromar.RuleQuotesE
@@ -42,27 +58,96 @@ library
 test-suite gdiff
   type: exitcode-stdio-1.0
   main-is: gdiff.hs
-  other-modules:
-    Paths_chromar
   hs-source-dirs:
     models
   other-extensions: BangPatterns
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
+  build-depends:
+    base,
+    chromar,
+    containers
+  buildable: False
+  default-language: Haskell2010
+
+test-suite germ
+  type: exitcode-stdio-1.0
+  main-is: germ.hs
+  other-modules:
+    SeedsModel.Env
+    SeedsModel.Germ
+  hs-source-dirs:
+    models
+  other-extensions: BangPatterns
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
+  build-depends:
+    base,
+    chromar,
+    containers,
+    normaldistribution,
+    random,
+    text
+  buildable: False
+  default-language: Haskell2010
+
+test-suite market
+  type: exitcode-stdio-1.0
+  main-is: Market.hs
+  hs-source-dirs:
+    models/market
+  other-extensions: BangPatterns
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
+  build-depends:
+    base,
+    chromar,
+    containers,
+    normaldistribution,
+    random
+  buildable: False
+  default-language: Haskell2010
+
+test-suite plant
+  type: exitcode-stdio-1.0
+  main-is: plant.hs
+  hs-source-dirs:
+    models
+  other-extensions: BangPatterns
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
+  build-depends:
+    base,
+    chromar,
+    containers
+  buildable: False
+  default-language: Haskell2010
+
+test-suite simple
+  type: exitcode-stdio-1.0
+  main-is: simple.hs
+  hs-source-dirs:
+    models
+  other-extensions: BangPatterns
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   build-depends:
     base,
     chromar,
     containers
   default-language: Haskell2010
 
-test-suite simple
+test-suite utils
   type: exitcode-stdio-1.0
-  main-is: simple.hs
+  main-is: utils.hs
   other-modules:
-    Paths_chromar
+    SeedsModel.Env
+    SeedsModel.Utils
   hs-source-dirs:
     models
   other-extensions: BangPatterns
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   build-depends:
     base,
     chromar,
-    containers
+    containers,
+    normaldistribution,
+    random,
+    text
+  buildable: False
   default-language: Haskell2010

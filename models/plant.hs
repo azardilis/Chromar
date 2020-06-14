@@ -20,9 +20,9 @@ isB _     = False
 $(return [])
 
 --- Rules
-growth       = [rule| L{m=m}, B{c=c} --> L{m=m+1.0}, B{c=c-1.0} @c/m [c-1>0] |]
-assimilation = [rule| L{m=m}, B{c=c} --> L{m=m}, B{c=c+1} @m [True] |]
-leafCreation = [rule| R{n=n}         --> R{n=n+1}, L{m=0} @0.0001 [True] |]
+growth       = [rule| L{m=m}, B{c=c} --> L{m='m+1.0'}, B{c='c-1.0'} @'c/m' ['c-1>0'] |]
+assimilation = [rule| L{m=m}, B{c=c} --> L{m='m'}, B{c='c+1'} @'m' ['True'] |]
+leafCreation = [rule| R{n=n}         --> R{n='n+1'}, L{m='0'} @'0.0001' ['True'] |]
 
 
 --- Initial state
