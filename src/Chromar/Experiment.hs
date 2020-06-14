@@ -1,10 +1,14 @@
--- | Convenience functions for running models
 module Chromar.Experiment where
 
-import Chromar.Core
-import Chromar.RExprs hiding (er)
-import Data.List (intercalate)
-import qualified System.Random as R
+{-
+Convenience functions for running models
+-}
+
+import           Chromar.Core
+import           Chromar.Multiset
+import           Chromar.RExprs
+import           Data.List
+import qualified System.Random    as R
 
 class ToSpaceSep a  where
     toSpaceSep :: a -> String
@@ -43,10 +47,10 @@ instance (Show a1, Show a2, Show a3, Show a4, Show a5, Show a6) =>
         " " ++ show v3 ++ " " ++ show v4 ++ " " ++ show v5 ++ " " ++ show v6
 
 instance (Show a) => ToSpaceSep [a] where
-    toSpaceSep xs = intercalate " " (map show xs)
+  toSpaceSep xs = intercalate " " (map show xs)
 
 applyEr :: Er a b -> State a -> b
-applyEr er (State m t _n) = at er m t
+applyEr er (State m t n) = at er m t
 
 run
     :: (Eq a, ToSpaceSep b)
@@ -71,17 +75,20 @@ runW (Model {rules = rs
 runT
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> Er a b -> IO ()
-runT Model{rules = rs,initState = s} t er = do
-    rgen <- R.getStdGen
-    let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulate rgen rs s)
-    mapM_ (putStrLn . toSpaceSep) traj
+runT (Model {rules = rs
+            ,initState = s}) t er = do
+  rgen <- R.getStdGen
+  let traj = map (applyEr er) $ takeWhile (\s -> getT s < t) (simulate rgen rs s)
+  mapM_ (putStrLn . toSpaceSep) traj
+
 
 runTW
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> FilePath -> [String] -> Er a b -> IO ()
-runTW Model{rules = rs ,initState = s} t fn nms er = do
-    rgen <- R.getStdGen
-    let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulate rgen rs s)
-    let header = toSpaceSep nms
-    let rows = header : (map toSpaceSep traj)
-    writeFile fn (unlines rows)
+runTW (Model {rules = rs
+             ,initState = s}) t fn nms er = do
+  rgen <- R.getStdGen
+  let traj = map (applyEr er) $ takeWhile (\s -> getT s < t) (simulate rgen rs s)
+  let header = toSpaceSep nms
+  let rows = header : (map toSpaceSep traj)
+  writeFile fn (unlines rows)
