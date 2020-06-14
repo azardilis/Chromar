@@ -1,16 +1,21 @@
 module Chromar.RuleQuotesE where
 
-import           Chromar.MAttrs
-import           Chromar.MRuleParser
-import           Data.List
-import           Data.Set                      (Set)
-import qualified Data.Set                      as Set
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Quote
-import           Language.Haskell.TH.Syntax
-import           Text.ParserCombinators.Parsec
-
-import qualified Chromar.RExprs                as RE
+import Prelude hiding (exp)
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Language.Haskell.TH
+    ( Q, Name, Stmt(..), Lit(..)
+    , Pat(..), FieldPat
+    , Exp(..), FieldExp
+    , newName, mkName, reify, stringE
+    )
+import Language.Haskell.TH.Quote (QuasiQuoter(..))
+import Language.Haskell.TH.Syntax (showName)
+import Text.ParserCombinators.Parsec (parse)
+import Chromar.MRuleParser (LAgent(..), RAgent(..), ARule(..), SRule(..), parseRule)
+import Chromar.MAttrs (fillAttrs)
+import qualified Chromar.RExprs as RE
+import Internal.RuleQuotes as RE
 
 type FieldProd = (FieldPat, [Exp], Set Name)
 
@@ -40,12 +45,12 @@ tRule (Rule {rlhs = ls
             ,rexpr = r
             ,cexpr = c}) =
     SRule
-    { lexps = map tLAgent ls
-    , rexps = map tRAgent rs
-    , multExps = ms
-    , srate = tRateE r
-    , cond = tCondE c
-    }
+        { lexps = map tLAgent ls
+        , rexps = map tRAgent rs
+        , multExps = ms
+        , srate = tRateE r
+        , cond = tCondE c
+        }
 
 --- pure action
 tFieldPat :: Set Name -> Name -> FieldExp -> FieldProd
@@ -53,16 +58,18 @@ tFieldPat names freshNm (nm, VarE pnm) =
     if Set.member pnm names
         then ( (nm, VarP freshNm)
              , [UInfixE (VarE freshNm) (VarE $ mkName "==") (VarE pnm)]
-             , Set.empty)
+             , Set.empty
+             )
         else ((nm, VarP pnm), [], Set.fromList [pnm])
-tFieldPat name freshNm (nm, exp) =
+tFieldPat _name freshNm (nm, exp) =
     ( (nm, VarP freshNm)
     , [UInfixE (VarE freshNm) (VarE $ mkName "==") exp]
-    , Set.empty)
+    , Set.empty
+    )
 
 --- monadic action
 qtFieldPat :: Set Name -> FieldExp -> Q FieldProd
-qtFieldPat names fexp@(nm, exp) = do
+qtFieldPat names fexp@(nm, _exp) = do
     fn <- newName (showName nm)
     return $ tFieldPat names fn fexp
 
@@ -81,8 +88,7 @@ mkAgentExps qfps = do
     return (fpats, guardExp, sn)
 
 mkPatStmt :: Name -> [FieldPat] -> Stmt
-mkPatStmt nm fpats = BindS pat (VarE $ mkName "s")
-  where
+mkPatStmt nm fpats = BindS pat (VarE $ mkName "s") where
     pat = TupP [RecP nm fpats, WildP]
 
 mkGuardStmt :: Exp -> Stmt
@@ -96,14 +102,13 @@ mkAgentStmts nm qexps = do
     return ([patStmt, guardStmt], sn)
 
 tAgentPat :: Set Name -> Exp -> Q ([Stmt], Set Name)
-tAgentPat sn (RecConE nm fexps) = mkAgentStmts nm qexps
-  where
+tAgentPat sn (RecConE nm fexps) = mkAgentStmts nm qexps where
     qfps = mapM (qtFieldPat sn) fexps
     qexps = mkAgentExps qfps
 tAgentPat _ _ = error "expected records"
 
 mkLhsStmts :: Set Name -> [Stmt] -> [Exp] -> Q [Stmt]
-mkLhsStmts sn allStmts [] = return allStmts
+mkLhsStmts _ allStmts [] = return allStmts
 mkLhsStmts sn allStmts (exp:exps) = do
     (stmts, sn') <- tAgentPat sn exp
     mkLhsStmts (Set.union sn sn') (allStmts ++ stmts) exps
@@ -118,12 +123,6 @@ mkErFApp nm =
              (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
              (VarE $ mkName "t"))
 
-tuplify :: Name -> Exp -> Exp -> Exp
-tuplify s lhs r = TupE [lhs, VarE s, r]
-
-tuplify2 :: Exp -> Exp -> Exp
-tuplify2 m ar = TupE [m, ar]
-
 mkActExp :: Name -> Exp -> Exp -> Exp
 mkActExp s lhs r = AppE (VarE $ mkName "fullRate") args
   where
@@ -133,12 +132,11 @@ mkReturnStmt :: Exp -> Stmt
 mkReturnStmt = NoBindS
 
 mkFApp' :: Exp -> [Exp] -> Exp
-mkFApp' f [] = undefined
+mkFApp' _ [] = undefined
 mkFApp' f (e:exps) = foldr (\x acc -> AppE acc x) (AppE f e) (reverse exps)
 
 mkRxnExp :: Name -> SRule -> Exp
-mkRxnExp s r = RecConE (mkName "Rxn") fields
-  where
+mkRxnExp s r = RecConE (mkName "Rxn") fields where
     lhsSym = mkName "lhs"
     rhsSym = mkName "rhs"
     rateSym = mkName "rate"
@@ -184,11 +182,11 @@ ruleQuoter s =
 rule :: QuasiQuoter
 rule =
     QuasiQuoter
-    { quoteExp = ruleQuoter
-    , quotePat = undefined
-    , quoteDec = undefined
-    , quoteType = undefined
-    }
+        { quoteExp = ruleQuoter
+        , quotePat = undefined
+        , quoteDec = undefined
+        , quoteType = undefined
+        }
 
 --- for testing
 ruleQuoter'' :: String -> Q Exp
