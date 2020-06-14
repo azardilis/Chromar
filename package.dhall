@@ -72,6 +72,18 @@
         , buildable =
             False
         }
+    , model =
+        { dependencies =
+            [ "base", "chromar" ]
+        , other-modules =
+            [] : List Text
+        , main =
+            "model.hs"
+        , source-dirs =
+            "models"
+        , buildable =
+            False
+        }
     , market =
         { dependencies =
             [ "base", "chromar", "random", "normaldistribution" ]
@@ -114,7 +126,7 @@
         , main =
             "germ.hs"
         , source-dirs =
-            "models"
+            "models/seedsModel"
         , buildable =
             False
         }
