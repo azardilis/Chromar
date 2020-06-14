@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, RecordWildCards #-}
 
 module Chromar.Core where
 
@@ -10,7 +10,27 @@ data Rxn a = Rxn
     { lhs :: Multiset a
     , rhs :: Multiset a
     , rate :: !Double
-    } deriving (Eq, Show)
+    }
+    deriving Eq
+
+instance Show a => Show (Rxn a) where
+    showsPrec _ Rxn{..} =
+        showString "Rxn {lhs = "
+        . shows lhs
+        . showString ", rhs = "
+        . shows rhs
+        . showString ", rate = "
+        . shows rate
+        . showChar '}'
+
+    showList [] = showString "[]"
+    showList (x : xs) =
+        showString "[ "
+        . shows x
+        . foldr
+            (\e m -> showString "\n, " . shows e . m)
+            (showString "\n]")
+            xs
 
 type Rule a = Multiset a -> Time -> [Rxn a]
 
