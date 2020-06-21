@@ -36,6 +36,8 @@
         , "multiset"
         ]
     , exposed-modules =
+        "Chromar"
+    , other-modules =
         [ "Chromar.Core"
         , "Chromar.RuleQuotesE"
         , "Chromar.Multiset"
@@ -43,7 +45,6 @@
         , "Chromar.MRuleParser"
         , "Chromar.RExprs"
         , "Chromar.Experiment"
-        , "Chromar"
         ]
     , when =
         [ { condition = "impl(ghc >= 8.10.0)", source-dirs = "src-ghc-8.10" }
