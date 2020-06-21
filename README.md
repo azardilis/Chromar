@@ -36,8 +36,9 @@ The Glorious Glasgow Haskell Compilation System, version 8.10.1
 
 * Fire up a REPL and have a go.
 
-  Notice that `stack repl` imports all the modules whereas `cabal repl` only
-  imports the module Chromar. This is the only module exposed by the package.
+  Notice that `stack repl` imports all modules whereas `cabal repl` only
+  imports module Chromar, the only module properly exposed by the package.
+  Build tools have their quirks!
 
 ```haskell
 % stack repl
