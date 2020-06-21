@@ -34,7 +34,8 @@ The Glorious Glasgow Haskell Compilation System, version 8.10.1
 % cd Chromar
 ```
 
-* Fire up a REPL and have a go.
+* Fire up a REPL and have a go, either [write](#writing) a model there and then
+  or [load a model module](#loading) from file.
 
   Notice that `stack repl` imports all modules whereas `cabal repl` only
   imports module Chromar, the only module properly exposed by the package.
@@ -54,7 +55,9 @@ Internal.RuleQuotes> :set prompt "> "
 >
 ```
 
-  After we set the prompt, the sessions in each REPL are verbatim the same.
+### <a href="writing">Writing a Model</a>
+After we set the prompt, the sessions in each REPL are verbatim the same with
+the following example model.
 ```haskell
 > :set -XQuasiQuotes
 > data Agent = A { a :: Double } deriving (Eq, Show)
@@ -67,12 +70,87 @@ Internal.RuleQuotes> :set prompt "> "
 ]
 ```
 
-or
-* Write a model to a file and then load in the repl (see example models in the /models directory)
+### <a href="loading">Loading a Model</a>
+A model saved to file can be loaded into the REPL. The test suites such as
+[simple](/models/simple.hs) can be loaded this way or loaded as test suites.
 
-``` haskell
+Load a module.
+
+```haskell
 % stack repl
-ghci> :l Model
-ghci> let nsteps = 1000
-ghci> run model nsteps observables
+> :load models/simple
+[ 1 of 10] Compiling Chromar.Multiset
+[ 2 of 10] Compiling Chromar.Core
+[ 3 of 10] Compiling Internal.RuleQuotes
+[ 4 of 10] Compiling Chromar.RExprs
+[ 5 of 10] Compiling Chromar.MRuleParser
+[ 6 of 10] Compiling Chromar.MAttrs
+[ 7 of 10] Compiling Chromar.RuleQuotesE
+[ 8 of 10] Compiling Chromar.Experiment
+[ 9 of 10] Compiling Chromar
+[10 of 10] Compiling Main
+Ok, 10 modules loaded.
+*Main> :browse Main
+data Agent = A {x :: Int}
+r1 :: [(Agent, Int)] -> Time -> [Rxn Agent]
+r2 :: [(Agent, Int)] -> Time -> [Rxn Agent]
+na :: Er Agent Int
+nx :: Er Agent Int
+s :: Multiset Agent
+model :: Model Agent
+main :: IO ()
+*Main>
+*Main> -- run the main function of the Main module
+*Main> :main
+2 10
+3 10
+...
+18 10
+19 10
+*Main>
+```
+
+Bring up the REPL with the simple test-suite using stack.
+
+```haskell
+% stack repl chromar:simple
+GHCi, version 8.8.3: https://www.haskell.org/ghc/  :? for help
+Loaded GHCi configuration from /Users/pdejoux/.ghci
+[1 of 1] Compiling Main
+Ok, one module loaded.
+*Main> :browse
+data Agent = A {x :: Int}
+r1 :: [(Agent, Int)] -> Time -> [Rxn Agent]
+r2 :: [(Agent, Int)] -> Time -> [Rxn Agent]
+na :: Er Agent Int
+nx :: Er Agent Int
+s :: Multiset Agent
+model :: Model Agent
+main :: IO ()
+*Main> :main
+2 10
+2 10
+...
+19 10
+20 10
+```
+
+Bring up the REPL with the simple test-suite using cabal.
+
+```
+% cabal repl test:simple
+Build profile: -w ghc-8.10.1 -O1
+In order, the following will be built (use -v for more details):
+BuildInplaceOnly
+ - chromar-0.1.0.0 (test:simple) (first run)
+Preprocessing test suite 'simple' for chromar-0.1.0.0..
+GHCi, version 8.10.1: https://www.haskell.org/ghc/  :? for help
+[1 of 1] Compiling Main
+Ok, one module loaded.
+*Main> :main
+2 10
+2 10
+...
+19 10
+20 10
 ```

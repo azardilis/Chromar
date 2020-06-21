@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7ea87a661fdf664059d5b3e49d8bfa33ad76a07093303d54ed0b629bd294687c
+-- hash: bd0b4fb853e77adfcebe158511dd09dcf4d19a6c87a19aa6dc61138544385c42
 
 name:                chromar
 version:             0.1.0.0
@@ -46,12 +46,12 @@ library
     Chromar
   other-modules:
     Chromar.Core
-    Chromar.RuleQuotesE
-    Chromar.Multiset
+    Chromar.Experiment
     Chromar.MAttrs
     Chromar.MRuleParser
+    Chromar.Multiset
     Chromar.RExprs
-    Chromar.Experiment
+    Chromar.RuleQuotesE
   default-language: Haskell2010
 
 test-suite gdiff
