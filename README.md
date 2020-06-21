@@ -15,7 +15,7 @@ this build tool.
 With [ghcup](https://www.haskell.org/ghcup/) we're able to install multiple GHC
 versions and multiple cabal versions on a system but at the same time select
 which one of each to work with so stack's GHC version set for this project and
-the selected one brought up by ghcup can be different.
+the system one brought up by ghcup can be different.
 
 ```
 % stack exec ghc -- --version
