@@ -34,8 +34,8 @@ The Glorious Glasgow Haskell Compilation System, version 8.10.1
 % cd Chromar
 ```
 
-* Fire up a REPL and have a go, either [write](#writing) a model there and then
-  or [load a model module](#loading) from file.
+* Fire up a REPL and have a go, either [write a model](#writing) there and then
+  or [load a model](#loading) module from file.
 
   Notice that `stack repl` imports all modules whereas `cabal repl` only
   imports module Chromar, the only module properly exposed by the package.
@@ -55,7 +55,7 @@ Internal.RuleQuotes> :set prompt "> "
 >
 ```
 
-### <a href="writing">Writing a Model</a>
+### <a name="writing">Write a Model</a>
 After we set the prompt, the sessions in each REPL are verbatim the same with
 the following example model.
 ```haskell
@@ -70,7 +70,7 @@ the following example model.
 ]
 ```
 
-### <a href="loading">Loading a Model</a>
+### <a name="loading">Load a Model</a>
 A model saved to file can be loaded into the REPL. The test suites such as
 [simple](/models/simple.hs) can be loaded this way or loaded as test suites.
 
