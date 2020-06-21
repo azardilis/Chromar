@@ -9,18 +9,17 @@
 % stack build
 ```
 * We can investigate things in the repl if we enable the quasiquotes language
-  extension. The ghci session will be cleaner if we supress a couple of warnings.
+  extension.
 ```haskell
 % stack repl
-> :set -XQuasiQuotes -fno-warn-name-shadowing -fno-warn-unused-matches
-> data Agent = A { x :: Double } deriving (Eq, Show)
+> :set -XQuasiQuotes
+> data Agent = A { a :: Double } deriving (Eq, Show)
 >
 > -- The line that follows is a rule applied to state and time.
-> [rule| A{x=x} --> A{x='x+1'} @'x' |] (ms [A{x=1}, A{x=1}, A{x=2}, A{x=3}]) 5.0
-[ Rxn {lhs = [(A {x = 1.0},1)], rhs = [(A {x = 2.0},1)], rate = 2.0}
-, Rxn {lhs = [(A {x = 2.0},1)], rhs = [(A {x = 3.0},1)], rate = 2.0}
-, Rxn {lhs = [(A {x = 3.0},1)], rhs = [(A {x = 4.0},1)], rate = 3.0}
-]
+> [rule| A{a=x} --> A{a='x+1'} @'x' |] (ms [A{a=1}, A{a=1}, A{a=2}, A{a=3}]) 5.0
+[ Rxn {lhs = [(A {a = 1.0},1)], rhs = [(A {a = 2.0},1)], rate = 2.0}
+, Rxn {lhs = [(A {a = 2.0},1)], rhs = [(A {a = 3.0},1)], rate = 2.0}
+, Rxn {lhs = [(A {a = 3.0},1)], rhs = [(A {a = 4.0},1)], rate = 3.0}
 ```
 or
 * Write a model to a file and then load in the repl (see example models in the /models directory)

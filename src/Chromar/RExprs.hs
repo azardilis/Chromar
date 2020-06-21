@@ -4,7 +4,7 @@ import Prelude hiding (exp)
 import Data.Fixed (mod')
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
-import Data.Set (Set)
+import Data.Set (Set, member)
 import Data.Functor.Identity
 import qualified Data.Set as Set
 import Language.Haskell.Meta.Parse
@@ -269,7 +269,10 @@ timeExp = VarE $ mkName "t"
 
 mkLiftExp :: Set Name -> Exp -> Exp
 mkLiftExp nms body = LamE args (lExp nms body) where
-    args = [VarP $ mkName "s", VarP $ mkName "t"]
+    args =
+        [ let s = mkName "s" in if s `member` nms then VarP s else WildP
+        , let t = mkName "t" in if t `member` nms then VarP t else WildP
+        ]
 
 mkWhenExp :: Exp -> Exp -> Exp -> Exp
 mkWhenExp eb e1 e2 = AppE (AppE (VarE $ mkName "orElse") whenE) e2 where
