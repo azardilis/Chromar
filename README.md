@@ -1,5 +1,7 @@
 ## Chromar Language and Simulator
 
+![cabal](https://github.com/BlockScope/Chromar/workflows/cabal/badge.svg)
+
 ### Build Tools
 
 We show how to get going with both stack and cabal. Pick either one or both.
