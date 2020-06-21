@@ -4,9 +4,10 @@
 
 We show how to get going with both stack and cabal. Pick either one or both.
 
-Stack will install a compiler version and pick package versions of dependencies
-that known to work together. These are published on stackage.org. We've picked
-a resolver in [`./stack.yaml`](/stack.yaml).
+Stack will install a compiler version and pick dependencies that are known to
+work together. These are published on
+[stackage.org](https://www.stackage.org/). We've picked a resolver in
+[`./stack.yaml`](/stack.yaml).
 
 The [stack](https://haskellstack.org) help landing page shows how to install
 this build tool.
