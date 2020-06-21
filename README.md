@@ -109,7 +109,6 @@ main :: IO ()
 ...
 18 10
 19 10
-*Main>
 ```
 
 Bring up the REPL with the simple test-suite using stack.
