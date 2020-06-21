@@ -74,7 +74,7 @@ the following example model.
 A model saved to file can be loaded into the REPL. The test suites such as
 [simple](/models/simple.hs) can be loaded this way or loaded as test suites.
 
-Load a module.
+Load the simple model's file. This unnamed module gets loaded as module Main.
 
 ```haskell
 % stack repl
