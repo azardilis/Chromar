@@ -137,7 +137,7 @@ main :: IO ()
 
 Bring up the REPL with the simple test-suite using cabal.
 
-```
+```haskell
 % cabal repl test:simple
 Build profile: -w ghc-8.10.1 -O1
 In order, the following will be built (use -v for more details):
