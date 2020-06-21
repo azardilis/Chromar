@@ -114,8 +114,6 @@ Bring up the REPL with the simple test-suite using stack.
 
 ```haskell
 % stack repl chromar:simple
-GHCi, version 8.8.3: https://www.haskell.org/ghc/  :? for help
-Loaded GHCi configuration from /Users/pdejoux/.ghci
 [1 of 1] Compiling Main
 Ok, one module loaded.
 *Main> :browse
@@ -139,12 +137,6 @@ Bring up the REPL with the simple test-suite using cabal.
 
 ```haskell
 % cabal repl test:simple
-Build profile: -w ghc-8.10.1 -O1
-In order, the following will be built (use -v for more details):
-BuildInplaceOnly
- - chromar-0.1.0.0 (test:simple) (first run)
-Preprocessing test suite 'simple' for chromar-0.1.0.0..
-GHCi, version 8.10.1: https://www.haskell.org/ghc/  :? for help
 [1 of 1] Compiling Main
 Ok, one module loaded.
 *Main> :main
