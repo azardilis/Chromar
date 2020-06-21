@@ -90,6 +90,8 @@ Load the simple model's file. This unnamed module gets loaded as module Main.
 [ 9 of 10] Compiling Chromar
 [10 of 10] Compiling Main
 Ok, 10 modules loaded.
+*Main>
+*Main> -- let's have a look what's here
 *Main> :browse Main
 data Agent = A {x :: Int}
 r1 :: [(Agent, Int)] -> Time -> [Rxn Agent]
@@ -116,15 +118,6 @@ Bring up the REPL with the simple test-suite using stack.
 % stack repl chromar:simple
 [1 of 1] Compiling Main
 Ok, one module loaded.
-*Main> :browse
-data Agent = A {x :: Int}
-r1 :: [(Agent, Int)] -> Time -> [Rxn Agent]
-r2 :: [(Agent, Int)] -> Time -> [Rxn Agent]
-na :: Er Agent Int
-nx :: Er Agent Int
-s :: Multiset Agent
-model :: Model Agent
-main :: IO ()
 *Main> :main
 2 10
 2 10
