@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 462ba9eb4531d9fe5b7fbcac0a62eddf10bbdad1a4cdb31bd77764cf90085bd5
+-- hash: bd0b4fb853e77adfcebe158511dd09dcf4d19a6c87a19aa6dc61138544385c42
 
 name:                chromar
 version:             0.1.0.0
@@ -43,16 +43,15 @@ library
   other-extensions: BangPatterns
   ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   exposed-modules:
-    Chromar.Core
-    Chromar.RuleQuotesE
-    Chromar.Multiset
-    Chromar.MAttrs
-    Chromar.MRuleParser
-    Chromar.RExprs
-    Chromar.Experiment
     Chromar
   other-modules:
-    Paths_chromar
+    Chromar.Core
+    Chromar.Experiment
+    Chromar.MAttrs
+    Chromar.MRuleParser
+    Chromar.Multiset
+    Chromar.RExprs
+    Chromar.RuleQuotesE
   default-language: Haskell2010
 
 test-suite gdiff
@@ -130,6 +129,7 @@ test-suite plant
     base,
     chromar,
     containers
+  buildable: False
   default-language: Haskell2010
 
 test-suite simple

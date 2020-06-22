@@ -36,26 +36,37 @@
         , "multiset"
         ]
     , exposed-modules =
+        [ "Chromar" ]
+    , other-modules =
         [ "Chromar.Core"
-        , "Chromar.RuleQuotesE"
-        , "Chromar.Multiset"
+        , "Chromar.Experiment"
         , "Chromar.MAttrs"
         , "Chromar.MRuleParser"
+        , "Chromar.Multiset"
         , "Chromar.RExprs"
-        , "Chromar.Experiment"
-        , "Chromar"
+        , "Chromar.RuleQuotesE"
         ]
     , when =
-        [ { condition = "impl(ghc >= 8.10.0)", source-dirs = "src-ghc-8.10" }
+        [ { condition =
+              "impl(ghc >= 8.10.0)"
+          , source-dirs =
+              "src-ghc-8.10"
+          , other-modules =
+              [ "Internal.RuleQuotes" ]
+          }
         , { condition =
               "impl(ghc >= 8.8.0) && impl(ghc < 8.10.0)"
           , source-dirs =
               "src-ghc-8.8"
+          , other-modules =
+              [ "Internal.RuleQuotes" ]
           }
         , { condition =
               "impl(ghc >= 8.6.0) && impl(ghc < 8.8.0)"
           , source-dirs =
               "src-ghc-8.6"
+          , other-modules =
+              [ "Internal.RuleQuotes" ]
           }
         ]
     }
