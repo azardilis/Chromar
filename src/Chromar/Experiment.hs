@@ -55,20 +55,24 @@ run Model{rules = rs, initState = s} n er = do
     let traj = map (applyEr er) $ take n (simulate rgen rs s)
     mapM_ (putStrLn . toSpaceSep) traj
 
+writeRows :: (ToSpaceSep a, ToSpaceSep b) => FilePath -> a -> [b] -> IO ()
+writeRows fn nms traj = do
+    let header = toSpaceSep nms
+    let rows = header : map toSpaceSep traj
+    writeFile fn (unlines rows)
+
 runW
     :: (Eq a, ToSpaceSep b)
     => Model a -> Int -> FilePath -> [String] -> Er a b -> IO ()
 runW Model{rules = rs, initState = s} n fn nms er = do
     rgen <- R.getStdGen
     let traj = map (applyEr er) $ take n (simulate rgen rs s)
-    let header = toSpaceSep nms
-    let rows = header : map toSpaceSep traj
-    writeFile fn (unlines rows)
+    writeRows fn nms traj
 
 runT
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> Er a b -> IO ()
-runT Model{rules = rs,initState = s} t er = do
+runT Model{rules = rs, initState = s} t er = do
     rgen <- R.getStdGen
     let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulate rgen rs s)
     mapM_ (putStrLn . toSpaceSep) traj
@@ -76,9 +80,7 @@ runT Model{rules = rs,initState = s} t er = do
 runTW
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> FilePath -> [String] -> Er a b -> IO ()
-runTW Model{rules = rs ,initState = s} t fn nms er = do
+runTW Model{rules = rs, initState = s} t fn nms er = do
     rgen <- R.getStdGen
     let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulate rgen rs s)
-    let header = toSpaceSep nms
-    let rows = header : map toSpaceSep traj
-    writeFile fn (unlines rows)
+    writeRows fn nms traj
