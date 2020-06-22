@@ -41,9 +41,13 @@ jobs:
         cabal v2-build all:libs
         cabal v2-build simple --enable-tests
         cabal v2-build hlint --enable-tests
+        cabal v2-build doctest --enable-tests
 
     - name: simple
       run: cabal v2-test simple --test-show-details=direct --test-option="--color=always"
 
-    - name: simple
+    - name: hlint
+      run: cabal v2-test hlint --test-show-details=direct --test-option="--color=always"
+
+    - name: doctest
       run: cabal v2-test hlint --test-show-details=direct --test-option="--color=always"
