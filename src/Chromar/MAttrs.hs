@@ -1,9 +1,11 @@
+{-# LANGUAGE PackageImports #-}
+
 module Chromar.MAttrs where
 
 import Chromar.MRuleParser
 import qualified Data.Map as M
 import qualified Data.Set as S
-import Language.Haskell.TH
+import "template-haskell" Language.Haskell.TH
 
 data AgentType = AgentT Nm (S.Set Nm) deriving (Show)
 

@@ -1,5 +1,15 @@
     let testopts = [ "-rtsopts", "-threaded", "-with-rtsopts=-N" ]
 
+in  let deps =
+          [ "base"
+          , "random"
+          , "parsec"
+          , "template-haskell"
+          , "haskell-src-meta"
+          , "containers"
+          , "multiset"
+          ]
+
 in  { name =
         "chromar"
     , version =
@@ -29,14 +39,7 @@ in  { name =
         { source-dirs =
             "src"
         , dependencies =
-            [ "base"
-            , "random"
-            , "parsec"
-            , "template-haskell"
-            , "haskell-src-meta"
-            , "containers"
-            , "multiset"
-            ]
+            deps
         , exposed-modules =
             [ "Chromar" ]
         , other-modules =
@@ -84,6 +87,33 @@ in  { name =
                 "HLint.hs"
             , source-dirs =
                 "test-suite-hlint"
+            }
+        , doctest =
+            { dependencies =
+                deps # [ "doctest", "QuickCheck", "chromar" ]
+            , ghc-options =
+                testopts
+            , main =
+                "DocTest.hs"
+            , source-dirs =
+                [ "src", "test-suite-doctest" ]
+            , when =
+                [ { condition =
+                      "impl(ghc >= 8.10.0)"
+                  , source-dirs =
+                      "src-ghc-8.10"
+                  }
+                , { condition =
+                      "impl(ghc >= 8.8.0) && impl(ghc < 8.10.0)"
+                  , source-dirs =
+                      "src-ghc-8.8"
+                  }
+                , { condition =
+                      "impl(ghc >= 8.6.0) && impl(ghc < 8.8.0)"
+                  , source-dirs =
+                      "src-ghc-8.6"
+                  }
+                ]
             }
         , gdiff =
             { dependencies =

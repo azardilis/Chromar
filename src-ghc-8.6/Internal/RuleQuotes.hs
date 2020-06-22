@@ -1,9 +1,11 @@
+{-# LANGUAGE PackageImports #-}
+
 module Internal.RuleQuotes (tuplify, tuplify2, lExp, mkErApp, mkErApp') where
 
 import Prelude hiding (exp)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Language.Haskell.TH (Name, Stmt(..), Exp(..), mkName)
+import "template-haskell" Language.Haskell.TH (Name, Stmt(..), Exp(..), mkName)
 
 tuplify :: Name -> Exp -> Exp -> Exp
 tuplify s lhs r = TupE [lhs, VarE s, r]

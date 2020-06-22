@@ -1,3 +1,5 @@
+{-# LANGUAGE PackageImports #-}
+
 module Chromar.RExprs where
 
 import Prelude hiding (exp)
@@ -8,7 +10,7 @@ import Data.Set (Set, member)
 import Data.Functor.Identity
 import qualified Data.Set as Set
 import Language.Haskell.Meta.Parse
-import Language.Haskell.TH
+import "template-haskell" Language.Haskell.TH
 import Language.Haskell.TH.Quote
 import Text.Parsec
 import Text.Parsec.Language (emptyDef)

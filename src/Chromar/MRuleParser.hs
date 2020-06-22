@@ -1,10 +1,12 @@
+{-# LANGUAGE PackageImports #-}
+
 module Chromar.MRuleParser where
 
 import Prelude hiding (exp)
 import Text.Parsec
 import Data.Functor.Identity
 import Language.Haskell.Meta.Parse
-import Language.Haskell.TH.Syntax
+import "template-haskell" Language.Haskell.TH.Syntax
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as Tok

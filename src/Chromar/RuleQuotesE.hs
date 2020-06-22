@@ -1,17 +1,19 @@
+{-# LANGUAGE PackageImports #-}
+
 module Chromar.RuleQuotesE where
 
 import Prelude hiding (exp)
 import Data.Set (Set)
 import Data.Bifunctor (bimap)
 import qualified Data.Set as Set
-import Language.Haskell.TH
+import "template-haskell" Language.Haskell.TH
     ( Q, Name, Stmt(..), Lit(..)
     , Pat(..), FieldPat
     , Exp(..), FieldExp
     , newName, mkName, reify, stringE
     )
 import Language.Haskell.TH.Quote (QuasiQuoter(..))
-import Language.Haskell.TH.Syntax (showName)
+import "template-haskell" Language.Haskell.TH.Syntax (showName)
 import Text.ParserCombinators.Parsec (parse)
 import Chromar.MRuleParser (LAgent(..), RAgent(..), ARule(..), SRule(..), parseRule)
 import Chromar.MAttrs (fillAttrs)

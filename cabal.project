@@ -1,0 +1,2 @@
+packages: ./chromar.cabal
+write-ghc-environment-files: always

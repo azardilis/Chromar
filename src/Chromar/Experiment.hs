@@ -8,6 +8,8 @@ import qualified System.Random as R
 class ToSpaceSep a  where
     toSpaceSep :: a -> String
 
+-- |
+-- prop> \(i :: Int) -> toSpaceSep i == show i
 instance ToSpaceSep Int where
     toSpaceSep i = show i
 
@@ -84,3 +86,8 @@ runTW Model{rules = rs, initState = s} t fn nms er = do
     rgen <- R.getStdGen
     let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulate rgen rs s)
     writeRows fn nms traj
+
+-- $setup
+-- >>> :set -XScopedTypeVariables -XPackageImports
+-- >>> import "template-haskell" Language.Haskell.TH
+-- >>> import "QuickCheck" Test.QuickCheck
