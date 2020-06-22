@@ -247,10 +247,8 @@ parensExpr f = do
         (Tok.symbol lexer ")")
         (parseEr f)
 
-{-
-   takes function and list of args and returns the expression for
-   function application to the args
--}
+-- | Takes function and list of args and returns the expression for function
+-- application to the args.
 mkFApp :: Exp -> [Exp] -> Exp
 mkFApp _ [] = undefined
 mkFApp f (e:exps) = foldr (flip AppE) (AppE f e) (reverse exps)

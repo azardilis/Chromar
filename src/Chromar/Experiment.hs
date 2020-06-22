@@ -1,15 +1,13 @@
--- | Convenience functions for running models
+-- | Convenience functions for running models.
 module Chromar.Experiment where
 
 import Chromar.Core
 import Chromar.RExprs hiding (er)
 import qualified System.Random as R
 
-class ToSpaceSep a  where
+class ToSpaceSep a where
     toSpaceSep :: a -> String
 
--- |
--- prop> \(i :: Int) -> toSpaceSep i == show i
 instance ToSpaceSep Int where
     toSpaceSep i = show i
 
