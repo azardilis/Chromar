@@ -2,7 +2,7 @@ name: cabal
 
 on:
   push:
-    branches: [ci-cabal, develop]
+    branches: [ci-cabal, develop, add/haddocks-13]
   pull_request:
     branches: [master]
 
@@ -40,6 +40,10 @@ jobs:
         cabal v2-update
         cabal v2-build all:libs
         cabal v2-build simple --enable-tests
+        cabal v2-build hlint --enable-tests
 
     - name: simple
       run: cabal v2-test simple --test-show-details=direct --test-option="--color=always"
+
+    - name: simple
+      run: cabal v2-test hlint --test-show-details=direct --test-option="--color=always"
