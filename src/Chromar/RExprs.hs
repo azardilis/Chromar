@@ -1,6 +1,17 @@
 {-# LANGUAGE PackageImports #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
-module Chromar.RExprs where
+module Chromar.RExprs
+    ( -- * Enriched Expressions
+      -- $Er
+      Er(..), SEr(..)
+    , Nm
+      -- * Parsing
+    , parseErString, parseEither
+      -- * Quoting
+    , mkExp, quoteEr, erQuoter
+    , er, mkEr, zipEr2, select, aggregate
+    ) where
 
 import Prelude hiding (exp)
 import Data.Fixed (mod')
@@ -23,16 +34,27 @@ import Internal.RuleQuotes (lExp, mkErApp')
 
 type Nm = String
 
-{- syntactic Er's -}
+-- $Er
+-- Enriched expressions consist of ordinary expressions, fluents and
+-- observables, and any combinations of them.
+
+-- | The syntax of enriched expressions.
 data SEr e
     = XExpr (Set Name) e
     | Time
     | When (SEr e) (SEr e) (SEr e)
+    -- ^ A condition, when the first is true evaluate the second otherwise
+    -- evaluate the third.
     | Repeat (SEr e) (SEr e)
+    -- ^ Repeat every fluent, repeating over time, where the first enriched
+    -- expression is the period of cycling and the second is the behaviour to
+    -- be cycled.
     | Obs Pat Nm (SEr e) (SEr e)
+    -- ^ A database-inspired observables expression.
     deriving (Show)
 
-{- semantic Er's -}
+-- | The semantic of enriched expressions as a function from a set of
+-- property states and time to a set of values.
 newtype Er a b = Er { at :: Multiset a -> Time -> b }
 
 mmod :: Real a => a -> a -> a
@@ -316,12 +338,19 @@ quoteEr (When er1 er2 er3) = mkWhenExp (quoteEr er1) (quoteEr er2) (quoteEr er3)
 quoteEr (Repeat er1 er2) = mkRepeatExp (quoteEr er1) (quoteEr er2)
 quoteEr (Obs lat nm er1 er2) = mkObsExp' lat nm (quoteEr er1) (quoteEr er2)
 
+-- |
+-- >>> runQ $ erQuoter "repeatEvery '5' (when '$light$ + 1' '5' else '1')"
+-- AppE (AppE (VarE repeatEvery) (AppE (VarE mkEr) (LamE [WildP,WildP] (LitE (IntegerL 5))))) (AppE (AppE (VarE orElse) (AppE (AppE (VarE when) (AppE (VarE mkEr) (LamE [WildP,WildP] (UInfixE (VarE light) (VarE +) (LitE (IntegerL 1)))))) (AppE (VarE mkEr) (LamE [WildP,WildP] (LitE (IntegerL 5)))))) (AppE (VarE mkEr) (LamE [WildP,WildP] (LitE (IntegerL 1)))))
+--
+-- >>> runQ $ erQuoter "select Leaf{m=m}; aggregate (count.'count + m') '0'"
+-- AppE (VarE mkEr) (LetE [FunD go [Clause [ListP [],VarP count,VarP s,VarP t] (NormalB (VarE count)) [],Clause [ParensP (UInfixP (RecP Leaf [(m,VarP m)]) : (VarP as)),VarP count,VarP s,VarP t] (NormalB (AppE (AppE (AppE (AppE (VarE go) (VarE as)) (ParensE (AppE (AppE (AppE (VarE at) (AppE (VarE mkEr) (LamE [WildP,WildP] (UInfixE (VarE count) (VarE +) (VarE m))))) (VarE s)) (VarE t)))) (VarE s)) (VarE t))) []]] (LamE [VarP s,VarP t] (AppE (AppE (AppE (AppE (VarE go) (CompE [BindS (AsP el (RecP Leaf [(m,VarP m)])) (AppE (VarE toList) (VarE s)),NoBindS (VarE el)])) (ParensE (AppE (AppE (AppE (VarE at) (AppE (VarE mkEr) (LamE [WildP,WildP] (LitE (IntegerL 0))))) (VarE s)) (VarE t)))) (VarE s)) (VarE t))))
+--
 erQuoter :: String -> Q Exp
 erQuoter s = case parse (parseEr mkExp) "er" s of
     Left err -> error (show err)
     Right e -> return $ quoteEr e
----- parse the quote into Er then create the functions per the semantics
 
+-- | Parse the quote into Er then create the functions per the semantics.
 er :: QuasiQuoter
 er =
     QuasiQuoter
@@ -331,19 +360,22 @@ er =
         , quoteType = undefined
         }
 
-------------- testing
-contents :: String
-contents = "repeatEvery '5' (when '$light$ + 1' '5' else '1')"
-
-contents' :: String
-contents' = "select Leaf{m=m}; aggregate (count.'count + m') '0'"
-
-go :: SEr Exp
-go = case parse (parseEr mkExp) "er" contents' of
-    (Left err) -> error (show err)
-    (Right val) -> val
-
+-- |
+-- >>> parseErString "repeatEvery '5' (when '$light$ + 1' '5' else '1')"
+-- Repeat (XExpr (fromList []) (LitE (IntegerL 5))) (When (XExpr (fromList []) (UInfixE (VarE light) (VarE +) (LitE (IntegerL 1)))) (XExpr (fromList []) (LitE (IntegerL 5))) (XExpr (fromList []) (LitE (IntegerL 1))))
+--
+-- >>> parseErString "select Leaf{m=m}; aggregate (count.'count + m') '0'"
+-- Obs (RecP Leaf [(m,VarP m)]) "count" (XExpr (fromList []) (UInfixE (VarE count) (VarE +) (VarE m))) (XExpr (fromList []) (LitE (IntegerL 0)))
 parseErString :: String -> SEr Exp
 parseErString s = case parse (parseEr mkExp) "er" s of
     (Left err) -> error (show err)
     (Right val) -> val
+
+-- |
+-- >>> parseEither "repeatEvery '5' (when '$light$ + 1' '5' else '1')"
+-- Right (Repeat (XExpr (fromList []) (LitE (IntegerL 5))) (When (XExpr (fromList []) (UInfixE (VarE light) (VarE +) (LitE (IntegerL 1)))) (XExpr (fromList []) (LitE (IntegerL 5))) (XExpr (fromList []) (LitE (IntegerL 1)))))
+--
+-- >>> parseEither "select Leaf{m=m}; aggregate (count.'count + m') '0'"
+-- Right (Obs (RecP Leaf [(m,VarP m)]) "count" (XExpr (fromList []) (UInfixE (VarE count) (VarE +) (VarE m))) (XExpr (fromList []) (LitE (IntegerL 0))))
+parseEither :: String -> Either ParseError (SEr Exp)
+parseEither = parse (parseEr mkExp) "er"

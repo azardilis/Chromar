@@ -2,7 +2,7 @@
 module Chromar.Experiment where
 
 import Chromar.Core
-import Chromar.RExprs hiding (er)
+import Chromar.RExprs (Er, at)
 import qualified System.Random as R
 
 class ToSpaceSep a where

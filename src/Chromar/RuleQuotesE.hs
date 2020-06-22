@@ -1,6 +1,7 @@
 {-# LANGUAGE PackageImports #-}
+{-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
-module Chromar.RuleQuotesE where
+module Chromar.RuleQuotesE (rule) where
 
 import Prelude hiding (exp)
 import Data.Set (Set)
