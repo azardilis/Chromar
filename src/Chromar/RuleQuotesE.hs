@@ -2,6 +2,7 @@ module Chromar.RuleQuotesE where
 
 import Prelude hiding (exp)
 import Data.Set (Set)
+import Data.Bifunctor (bimap)
 import qualified Data.Set as Set
 import Language.Haskell.TH
     ( Q, Name, Stmt(..), Lit(..)
@@ -27,7 +28,7 @@ tRAgent :: RAgent Exp -> Exp
 tRAgent (RAgent nm attrs) =
     RecConE
         (mkName nm)
-        (map (\(aNm, e) -> (mkName aNm, RE.mkErApp' . RE.quoteEr $ e)) attrs)
+        (bimap mkName (RE.mkErApp' . RE.quoteEr) <$> attrs)
 
 tRateE :: RE.SEr Exp -> Exp
 tRateE = RE.mkErApp' . RE.quoteEr
@@ -39,11 +40,7 @@ tCondE = RE.mkErApp' . RE.quoteEr
    left agent exprs become Haskell record exprs etc.
 -}
 tRule :: ARule Exp -> SRule
-tRule (Rule {rlhs = ls
-            ,rrhs = rs
-            ,mults = ms
-            ,rexpr = r
-            ,cexpr = c}) =
+tRule Rule{rlhs = ls, rrhs = rs, mults = ms, rexpr = r, cexpr = c} =
     SRule
         { lexps = map tLAgent ls
         , rexps = map tRAgent rs
@@ -133,7 +130,7 @@ mkReturnStmt = NoBindS
 
 mkFApp' :: Exp -> [Exp] -> Exp
 mkFApp' _ [] = undefined
-mkFApp' f (e:exps) = foldr (\x acc -> AppE acc x) (AppE f e) (reverse exps)
+mkFApp' f (e:exps) = foldr (flip AppE) (AppE f e) (reverse exps)
 
 mkRxnExp :: Name -> SRule -> Exp
 mkRxnExp s r = RecConE (mkName "Rxn") fields where
@@ -191,5 +188,5 @@ rule =
 --- for testing
 ruleQuoter'' :: String -> Q Exp
 ruleQuoter'' s = do
-    info <- reify (mkName $ s)
+    info <- reify $ mkName s
     stringE (show info)

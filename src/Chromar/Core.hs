@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, RecordWildCards #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Chromar.Core where
 
@@ -70,7 +70,7 @@ nrepl :: ([Int], [a]) -> [a]
 nrepl (mults', elems) = concat [replicate m e | (m, e) <- zip mults' elems]
 
 apply :: (Eq a) => Rxn a -> Multiset a -> Multiset a
-apply rxn mix = mix `diff` (lhs rxn) `plus` (rhs rxn)
+apply rxn mix = mix `diff` lhs rxn `plus` rhs rxn
 
 selectRxn :: Double -> Double -> [Rxn a] -> Rxn a
 selectRxn _ _ [] = error "deadlock"
@@ -79,7 +79,7 @@ selectRxn acc n (rxn:rxns)
     | n < acc' = rxn
     | otherwise = selectRxn acc' n rxns
     where
-        acc' = acc + (rate rxn)
+        acc' = acc + rate rxn
 
 sample :: R.StdGen -> [Rxn a] -> (Rxn a, Double, R.StdGen)
 sample gen rxns =
@@ -116,7 +116,7 @@ simulate :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
 simulate gen rules' init = map snd $ iterate (step rules') (gen, State init 0.0 0)
 
 printTrajectory :: (Show a) => [State a] -> IO ()
-printTrajectory states = mapM_ (putStrLn . showState) states
+printTrajectory = mapM_ (putStrLn . showState)
 
 writeTrajectory :: (Show a) => FilePath -> [State a] -> IO ()
 writeTrajectory fn states = writeFile fn (unlines $ map showState states)

@@ -3,7 +3,6 @@ module Chromar.Experiment where
 
 import Chromar.Core
 import Chromar.RExprs hiding (er)
-import Data.List (intercalate)
 import qualified System.Random as R
 
 class ToSpaceSep a  where
@@ -43,7 +42,7 @@ instance (Show a1, Show a2, Show a3, Show a4, Show a5, Show a6) =>
         " " ++ show v3 ++ " " ++ show v4 ++ " " ++ show v5 ++ " " ++ show v6
 
 instance (Show a) => ToSpaceSep [a] where
-    toSpaceSep xs = intercalate " " (map show xs)
+    toSpaceSep xs = unwords $ map show xs
 
 applyEr :: Er a b -> State a -> b
 applyEr er (State m t _n) = at er m t
@@ -51,8 +50,7 @@ applyEr er (State m t _n) = at er m t
 run
     :: (Eq a, ToSpaceSep b)
     => Model a -> Int -> Er a b -> IO ()
-run (Model {rules = rs
-           ,initState = s}) n er = do
+run Model{rules = rs, initState = s} n er = do
     rgen <- R.getStdGen
     let traj = map (applyEr er) $ take n (simulate rgen rs s)
     mapM_ (putStrLn . toSpaceSep) traj
@@ -60,12 +58,11 @@ run (Model {rules = rs
 runW
     :: (Eq a, ToSpaceSep b)
     => Model a -> Int -> FilePath -> [String] -> Er a b -> IO ()
-runW (Model {rules = rs
-            ,initState = s}) n fn nms er = do
+runW Model{rules = rs, initState = s} n fn nms er = do
     rgen <- R.getStdGen
     let traj = map (applyEr er) $ take n (simulate rgen rs s)
     let header = toSpaceSep nms
-    let rows = header : (map toSpaceSep traj)
+    let rows = header : map toSpaceSep traj
     writeFile fn (unlines rows)
 
 runT
@@ -83,5 +80,5 @@ runTW Model{rules = rs ,initState = s} t fn nms er = do
     rgen <- R.getStdGen
     let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulate rgen rs s)
     let header = toSpaceSep nms
-    let rows = header : (map toSpaceSep traj)
+    let rows = header : map toSpaceSep traj
     writeFile fn (unlines rows)
