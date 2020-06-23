@@ -31,7 +31,7 @@ data SEr e
     deriving (Show)
 
 {- semantic Er's -}
-data Er a b = Er { at :: Multiset a -> Time -> b }
+newtype Er a b = Er { at :: Multiset a -> Time -> b }
 
 mmod :: Real a => a -> a -> a
 mmod n m
@@ -188,8 +188,13 @@ hExpr f = do
 
 parseEr :: (String -> e) -> Parser (SEr e)
 parseEr f = whiteSpace >>
-    ((whenExpr f) <|> (repeatExpr f) <|> (obsExpr f) <|> timeExpr <|> (parensExpr f) <|>
-    (hExpr f))
+    ( whenExpr f
+    <|> repeatExpr f
+    <|> obsExpr f
+    <|> timeExpr
+    <|> parensExpr f
+    <|> hExpr f
+    )
 
 whenExpr :: (String -> e) -> Parser (SEr e)
 whenExpr f = do
@@ -212,7 +217,7 @@ foldExpr f = do
     nm <- Tok.identifier lexer
     _ <- Tok.symbol lexer "."
     er' <- parseEr f
-    return $ (nm, er')
+    return (nm, er')
 
 obsExpr :: (String -> e) -> Parser (SEr e)
 obsExpr f = do
@@ -235,12 +240,10 @@ timeExpr = do
 
 parensExpr :: (String -> e) -> Parser (SEr e)
 parensExpr f = do
-    er' <-
-        Text.Parsec.between
-            (Tok.symbol lexer "(")
-            (Tok.symbol lexer ")")
-            (parseEr f)
-    return er'
+    Text.Parsec.between
+        (Tok.symbol lexer "(")
+        (Tok.symbol lexer ")")
+        (parseEr f)
 
 {-
    takes function and list of args and returns the expression for
@@ -248,7 +251,7 @@ parensExpr f = do
 -}
 mkFApp :: Exp -> [Exp] -> Exp
 mkFApp _ [] = undefined
-mkFApp f (e:exps) = foldr (\x acc -> AppE acc x) (AppE f e) (reverse exps)
+mkFApp f (e:exps) = foldr (flip AppE) (AppE f e) (reverse exps)
 
 mkSelect :: Pat -> Exp
 mkSelect pat = CompE [bindStmt, retStmt]
@@ -275,11 +278,11 @@ mkLiftExp nms body = LamE args (lExp nms body) where
         ]
 
 mkWhenExp :: Exp -> Exp -> Exp -> Exp
-mkWhenExp eb e1 e2 = AppE (AppE (VarE $ mkName "orElse") whenE) e2 where
+mkWhenExp eb e1 = AppE (AppE (VarE $ mkName "orElse") whenE) where
     whenE = AppE (AppE (VarE $ mkName "when") eb) e1
 
 mkRepeatExp :: Exp -> Exp -> Exp
-mkRepeatExp et e = AppE (AppE (VarE $ mkName "repeatEvery") et) e
+mkRepeatExp et = AppE (AppE (VarE $ mkName "repeatEvery") et)
 
 mkFoldF :: Pat -> Nm -> Exp -> Dec
 mkFoldF pat nm combE = FunD (mkName "go") [emptyClause, nonemptyClause] where

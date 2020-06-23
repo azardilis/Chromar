@@ -36,7 +36,7 @@ perms n k
         numsToOne n' = enumFromThenTo n' (n' - 1) 1
 
 binom :: Int -> Int -> Int
-binom n k = perms n k `quot` (product $ numsToOne k) where
+binom n k = perms n k `quot` product (numsToOne k) where
     numsToOne n' = enumFromThenTo n' (n' - 1) 1
 
 mults :: (Eq a) => Multiset a -> Multiset a -> Int
@@ -48,22 +48,22 @@ diff ((x, n):xs) ys =
     sub $ find (\(y, _) -> x == y) ys
     where
         sub (Just (_y, m))
-            | n - m > 0 = (x, n - m) : (diff xs ys)
+            | n - m > 0 = (x, n - m) : diff xs ys
             | otherwise = diff xs ys
-        sub Nothing = (x, n) : (diff xs ys)
+        sub Nothing = (x, n) : diff xs ys
 
 plus :: (Eq a) => Multiset a -> Multiset a -> Multiset a
 plus [] ys = ys
 plus ((x, n):xs) ys =
     add $ findAndRemove [] (\(y, _) -> x == y) ys
     where
-        add (Just (_y, m), ys') = (x, n + m) : (plus xs ys')
-        add (Nothing, _) = (x, n) : (plus xs ys)
+        add (Just (_y, m), ys') = (x, n + m) : plus xs ys'
+        add (Nothing, _) = (x, n) : plus xs ys
 
 findAndRemove :: [a] -> (a -> Bool) -> [a] -> (Maybe a, [a])
 findAndRemove acc _ [] = (Nothing, reverse acc)
 findAndRemove acc p (x:xs)
-    | p x = (Just x, (reverse acc) ++ xs)
+    | p x = (Just x, reverse acc ++ xs)
     | otherwise = findAndRemove (x : acc) p xs
 
 toList :: Multiset a -> [a]

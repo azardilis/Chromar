@@ -77,20 +77,20 @@ lattr = do
     attrNm <- name
     op "="
     v <- many1 (noneOf ['}', ','])
-    return $ (attrNm, v)
+    return (attrNm, v)
 
 rattr :: Parser (AttrName, RE.SEr Exp)
 rattr = do
     attrNm <- name
     op "="
     es <- many1 (noneOf ['}', ','])
-    return $ (attrNm, RE.parseErString es)
+    return (attrNm, RE.parseErString es)
 
 lagent :: Parser LAgent
 lagent = do
     agentNm <- name
     attrs <- braces (commaSep lattr)
-    return  $ LAgent agentNm attrs
+    return $ LAgent agentNm attrs
 
 mult :: Parser String
 mult = braces (many1 (noneOf ['}']))
