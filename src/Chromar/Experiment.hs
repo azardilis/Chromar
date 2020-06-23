@@ -6,7 +6,7 @@ module Chromar.Experiment
 
 import Chromar.Core (Model(..), State(..), Time, simulateRule, getT)
 import Chromar.Enriched.Syntax (Er, at)
-import qualified System.Random as R (getStdGen)
+import System.Random (StdGen, getStdGen)
 
 class ToSpaceSep a where
     toSpaceSep :: a -> String
@@ -50,42 +50,48 @@ instance (Show a) => ToSpaceSep [a] where
 applyEr :: Er a b -> State a -> b
 applyEr er (State m t _n) = at er m t
 
-run
-    :: (Eq a, ToSpaceSep b)
-    => Model a -> Int -> Er a b -> IO ()
-run Model{rules = rs, initState = s} n er = do
-    rgen <- R.getStdGen
-    let traj = map (applyEr er) $ take n (simulateRule rgen rs s)
-    mapM_ (putStrLn . toSpaceSep) traj
-
 writeRows :: (ToSpaceSep a, ToSpaceSep b) => FilePath -> a -> [b] -> IO ()
 writeRows fn nms traj = do
     let header = toSpaceSep nms
     let rows = header : map toSpaceSep traj
     writeFile fn (unlines rows)
 
+simN :: Eq a => Int -> StdGen -> Model a -> [State a]
+simN n rgen Model{rules = rs, initState = s} = take n (simulateRule rgen rs s)
+
+simPred :: Eq a => (State a -> Bool) -> StdGen -> Model a -> [State a]
+simPred p rgen Model{rules = rs, initState = s} = takeWhile p (simulateRule rgen rs s)
+
+run
+    :: (Eq a, ToSpaceSep b)
+    => Model a -> Int -> Er a b -> IO ()
+run model n er = do
+    rgen <- getStdGen
+    let traj = applyEr er <$> simN n rgen model
+    mapM_ (putStrLn . toSpaceSep) traj
+
 runW
     :: (Eq a, ToSpaceSep b)
     => Model a -> Int -> FilePath -> [String] -> Er a b -> IO ()
-runW Model{rules = rs, initState = s} n fn nms er = do
-    rgen <- R.getStdGen
-    let traj = map (applyEr er) $ take n (simulateRule rgen rs s)
+runW model n fn nms er = do
+    rgen <- getStdGen
+    let traj = applyEr er <$> simN n rgen model
     writeRows fn nms traj
 
 runT
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> Er a b -> IO ()
-runT Model{rules = rs, initState = s} t er = do
-    rgen <- R.getStdGen
-    let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulateRule rgen rs s)
+runT model t er = do
+    rgen <- getStdGen
+    let traj = applyEr er <$> simPred (\s' -> getT s' < t) rgen model
     mapM_ (putStrLn . toSpaceSep) traj
 
 runTW
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> FilePath -> [String] -> Er a b -> IO ()
-runTW Model{rules = rs, initState = s} t fn nms er = do
-    rgen <- R.getStdGen
-    let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulateRule rgen rs s)
+runTW model t fn nms er = do
+    rgen <- getStdGen
+    let traj = applyEr er <$> simPred (\s' -> getT s' < t) rgen model
     writeRows fn nms traj
 
 -- $setup
