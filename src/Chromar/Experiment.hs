@@ -4,7 +4,7 @@ module Chromar.Experiment
     , run, runT, runW, runTW
     ) where
 
-import Chromar.Core (Model(..), State(..), Time, simulate, getT)
+import Chromar.Core (Model(..), State(..), Time, simulateRule, getT)
 import Chromar.Enriched.Syntax (Er, at)
 import qualified System.Random as R (getStdGen)
 
@@ -55,7 +55,7 @@ run
     => Model a -> Int -> Er a b -> IO ()
 run Model{rules = rs, initState = s} n er = do
     rgen <- R.getStdGen
-    let traj = map (applyEr er) $ take n (simulate rgen rs s)
+    let traj = map (applyEr er) $ take n (simulateRule rgen rs s)
     mapM_ (putStrLn . toSpaceSep) traj
 
 writeRows :: (ToSpaceSep a, ToSpaceSep b) => FilePath -> a -> [b] -> IO ()
@@ -69,7 +69,7 @@ runW
     => Model a -> Int -> FilePath -> [String] -> Er a b -> IO ()
 runW Model{rules = rs, initState = s} n fn nms er = do
     rgen <- R.getStdGen
-    let traj = map (applyEr er) $ take n (simulate rgen rs s)
+    let traj = map (applyEr er) $ take n (simulateRule rgen rs s)
     writeRows fn nms traj
 
 runT
@@ -77,7 +77,7 @@ runT
     => Model a -> Time -> Er a b -> IO ()
 runT Model{rules = rs, initState = s} t er = do
     rgen <- R.getStdGen
-    let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulate rgen rs s)
+    let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulateRule rgen rs s)
     mapM_ (putStrLn . toSpaceSep) traj
 
 runTW
@@ -85,7 +85,7 @@ runTW
     => Model a -> Time -> FilePath -> [String] -> Er a b -> IO ()
 runTW Model{rules = rs, initState = s} t fn nms er = do
     rgen <- R.getStdGen
-    let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulate rgen rs s)
+    let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulateRule rgen rs s)
     writeRows fn nms traj
 
 -- $setup

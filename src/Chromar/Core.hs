@@ -7,8 +7,8 @@ module Chromar.Core
     , State(..)
     , Model(..)
     , getM, getMs, getT, getTs
-    , step, step', fullRate, nrepl
-    , simulate, simulate'
+    , stepRule, stepRxn, fullRate, nrepl
+    , simulateRule, simulateRxn
     , printTrajectory, writeTrajectory
     ) where
 
@@ -100,21 +100,15 @@ sample gen rxns =
         (b, g2) = R.randomR (0.0, totalProp) g1
         dt = log (1.0 / a) / totalProp
 
-step' :: (Eq a) => [Rxn a] -> (R.StdGen, State a) -> (R.StdGen, State a)
-step' rxns (gen, State mix t n) =
+stepRxn :: (Eq a) => [Rxn a] -> (R.StdGen, State a) -> (R.StdGen, State a)
+stepRxn rxns (gen, State mix t n) =
     (gen', State mix' (t + dt) (n + 1))
     where
         (rxn, dt, gen') = sample gen rxns
         mix' = apply rxn mix
 
-simulate' :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
-simulate' gen rules' init =
-    map snd $ iterate (step' rxns) (gen, State init 0.0 0)
-    where
-        rxns = concatMap (\r -> r init 0.0) rules'
-
-step :: (Eq a) => [Rule a] -> (R.StdGen, State a) -> (R.StdGen, State a)
-step rules' (gen, State mix t n) =
+stepRule :: (Eq a) => [Rule a] -> (R.StdGen, State a) -> (R.StdGen, State a)
+stepRule rules' (gen, State mix t n) =
     (gen', State mix' (t + dt) (n + 1))
     where
         rxns = concatMap (\r -> r mix t) rules'
@@ -122,8 +116,16 @@ step rules' (gen, State mix t n) =
         (rxn, dt, gen') = sample gen actRxns
         mix' = apply rxn mix
 
-simulate :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
-simulate gen rules' init = map snd $ iterate (step rules') (gen, State init 0.0 0)
+-- | Simulate by iterating 'stepRxn' after first initializing the rules.
+simulateRxn :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
+simulateRxn gen rules' init =
+    map snd $ iterate (stepRxn rxns) (gen, State init 0.0 0)
+    where
+        rxns = concatMap (\r -> r init 0.0) rules'
+
+-- | Simulate by iterating 'stepRule'.
+simulateRule :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
+simulateRule gen rules' init = map snd $ iterate (stepRule rules') (gen, State init 0.0 0)
 
 printTrajectory :: (Show a) => [State a] -> IO ()
 printTrajectory = mapM_ (putStrLn . showState)

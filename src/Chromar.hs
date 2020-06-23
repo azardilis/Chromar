@@ -1,6 +1,7 @@
+{-# OPTIONS_GHC -fno-warn-dodgy-exports #-}
+
 module Chromar
     ( module Chromar.Core
-    , module Chromar.Enriched.Parse
     , module Chromar.Enriched.Syntax
     , module Chromar.Enriched.TH
     , module Chromar.Enriched.Zip
@@ -9,11 +10,11 @@ module Chromar
     , module Chromar.Rule.TH
     ) where
 
-import Chromar.Core
-import Chromar.Enriched.Parse
-import Chromar.Enriched.Syntax
-import Chromar.Enriched.TH
-import Chromar.Enriched.Zip
-import Chromar.Experiment
-import Chromar.Multiset
-import Chromar.Rule.TH
+-- WARNING: For now, we're only exporting what is needed by the test suites.
+import Chromar.Core (Model(..), Time, Rxn(..), fullRate, nrepl)
+import Chromar.Enriched.Syntax (Er(..), mkEr)
+import Chromar.Enriched.TH (er)
+import Chromar.Enriched.Zip (erZip)
+import Chromar.Experiment (run)
+import Chromar.Multiset (Multiset, ms, toList)
+import Chromar.Rule.TH (rule)
