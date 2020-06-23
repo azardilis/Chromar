@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns #-}
 
 module Chromar.Core
     ( Rule
@@ -117,15 +117,16 @@ stepRule rules' (gen, State mix t n) =
         mix' = apply rxn mix
 
 -- | Simulate by iterating 'stepRxn' after first initializing the rules.
-simulateRxn :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
-simulateRxn gen rules' init =
-    map snd $ iterate (stepRxn rxns) (gen, State init 0.0 0)
+simulateRxn :: (Eq a) => R.StdGen -> Model a -> [State a]
+simulateRxn gen Model{rules, initState} =
+    snd <$> iterate (stepRxn rxns) (gen, State initState 0.0 0)
     where
-        rxns = concatMap (\r -> r init 0.0) rules'
+        rxns = concatMap (\r -> r initState 0.0) rules
 
 -- | Simulate by iterating 'stepRule'.
-simulateRule :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
-simulateRule gen rules' init = map snd $ iterate (stepRule rules') (gen, State init 0.0 0)
+simulateRule :: (Eq a) => R.StdGen -> Model a -> [State a]
+simulateRule gen Model{rules, initState} =
+    snd <$> iterate (stepRule rules) (gen, State initState 0.0 0)
 
 printTrajectory :: (Show a) => [State a] -> IO ()
 printTrajectory = mapM_ (putStrLn . showState)

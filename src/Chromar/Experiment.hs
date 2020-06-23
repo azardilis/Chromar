@@ -57,10 +57,10 @@ writeRows fn nms traj = do
     writeFile fn (unlines rows)
 
 simN :: Eq a => Int -> StdGen -> Model a -> [State a]
-simN n rgen Model{rules = rs, initState = s} = take n (simulateRule rgen rs s)
+simN n rgen model = take n $ simulateRule rgen model
 
 simPred :: Eq a => (State a -> Bool) -> StdGen -> Model a -> [State a]
-simPred p rgen Model{rules = rs, initState = s} = takeWhile p (simulateRule rgen rs s)
+simPred p rgen model = takeWhile p $ simulateRule rgen model
 
 run
     :: (Eq a, ToSpaceSep b)
