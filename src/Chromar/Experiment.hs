@@ -1,9 +1,12 @@
 -- | Convenience functions for running models.
-module Chromar.Experiment where
+module Chromar.Experiment
+    ( ToSpaceSep(..)
+    , run, runT, runW, runTW
+    ) where
 
-import Chromar.Core
+import Chromar.Core (Model(..), State(..), Time, simulate, getT)
 import Chromar.Enriched.Syntax (Er, at)
-import qualified System.Random as R
+import qualified System.Random as R (getStdGen)
 
 class ToSpaceSep a where
     toSpaceSep :: a -> String

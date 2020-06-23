@@ -16,9 +16,8 @@ import Text.Parsec ((<|>), ParsecT, ParseError, many1, noneOf, between, parse)
 import Text.Parsec.Language (emptyDef)
 import Text.ParserCombinators.Parsec (Parser)
 import qualified Text.Parsec.Token as Tok
-    ( GenLanguageDef, TokenParser, makeTokenParser
-    , symbol, identifier, whiteSpace, squares, braces
-    , commaSep, reservedNames, reservedOp, reservedOpNames
+    ( GenLanguageDef, TokenParser, GenTokenParser(..)
+    , reservedNames, reservedOpNames, makeTokenParser
     )
 
 import Chromar.Enriched.Syntax (SEr(..), Nm)

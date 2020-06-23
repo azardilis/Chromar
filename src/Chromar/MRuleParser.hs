@@ -1,15 +1,26 @@
 {-# LANGUAGE PackageImports #-}
 
-module Chromar.MRuleParser where
+module Chromar.MRuleParser
+    ( SRule(..), ARule(..), LAgent(..), RAgent(..), Nm
+    , langDef, lexer, op, name, commaSep, braces, squares, whiteSpace
+    , lattr, rattr, lagent, mult, ragent
+    , dec, valDec
+    , lhsParser, rhsParser, whereParser, parseRule
+    , createExps
+    ) where
 
 import Prelude hiding (exp)
-import Text.Parsec
-import Data.Functor.Identity
+import Text.Parsec (ParsecT, noneOf, many1, option)
+import Data.Functor.Identity (Identity)
 import qualified Language.Haskell.Meta.Parse as Meta (parseExp)
 import "template-haskell" Language.Haskell.TH.Syntax
+    (Dec(..), Exp(..), Pat(..), Body(..), mkName)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as Tok
+    ( GenLanguageDef, TokenParser, GenTokenParser(..)
+    , reservedNames, reservedOpNames, makeTokenParser
+    )
 import Chromar.Enriched.Syntax (SEr)
 import Chromar.Enriched.Parse (parseErString, parseExp)
 
@@ -137,6 +148,9 @@ createExps exps = case mapM Meta.parseExp exps of
     Left s -> error s
     Right pexps -> pexps
 
+-- |
+-- >>> parse parseRule "rule" "A{x=x'}--> A{x='x+1'} @'$na$'"
+-- Right (Rule {rlhs = [LAgent "A" [("x","x'")]], rrhs = [RAgent "A" [("x",XExpr (fromList []) (UInfixE (VarE x) (VarE +) (LitE (IntegerL 1))))]], mults = [LitE (IntegerL 1)], rexpr = XExpr (fromList []) (VarE na), cexpr = XExpr (fromList []) (ConE True)})
 parseRule :: Parser (ARule Exp)
 parseRule = do
     whiteSpace
@@ -156,11 +170,5 @@ parseRule = do
             , cexpr = parseErString cexpr'
             }
 
---- for testing
-contents :: String
-contents = "A{x=x'}--> A{x='x+1'} @'$na$'"
-
-go :: ARule Exp
-go = case parse parseRule "rule" contents of
-    (Left err) -> error (show err)
-    (Right val) -> val
+-- $setup
+-- >>> import Text.Parsec (parse)

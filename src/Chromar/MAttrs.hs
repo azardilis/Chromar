@@ -1,11 +1,17 @@
 {-# LANGUAGE PackageImports #-}
 
-module Chromar.MAttrs where
+module Chromar.MAttrs
+    ( AgentType(..)
+    , fillPat, fillAttrs
+    ) where
 
-import Chromar.MRuleParser
-import qualified Data.Map as M
-import qualified Data.Set as S
+import Chromar.MRuleParser (SRule(..), Nm)
+import qualified Data.Map as M (fromList, toList, difference, union)
+import qualified Data.Set as S (Set, fromList, toList, difference)
 import "template-haskell" Language.Haskell.TH
+    ( Q, Dec(..), Exp(..), Info(..), FieldExp, Con(..)
+    , reify, mkName, nameBase, newName
+    )
 
 data AgentType = AgentT Nm (S.Set Nm) deriving (Show)
 

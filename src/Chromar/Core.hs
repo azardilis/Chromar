@@ -1,6 +1,16 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Chromar.Core where
+module Chromar.Core
+    ( Rule
+    , Time
+    , Rxn(..)
+    , State(..)
+    , Model(..)
+    , getM, getMs, getT, getTs
+    , step, step', fullRate, nrepl
+    , simulate, simulate'
+    , printTrajectory, writeTrajectory
+    ) where
 
 import Prelude hiding (init)
 import qualified System.Random as R (StdGen, randomR)
