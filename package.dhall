@@ -2,7 +2,7 @@
 
 in  let deps =
           [ "base"
-          , "random"
+          , "random == 1.1"
           , "parsec"
           , "template-haskell"
           , "haskell-src-meta"

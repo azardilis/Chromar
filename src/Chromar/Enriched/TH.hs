@@ -1,10 +1,12 @@
+{-# LANGUAGE PackageImports #-}
+
 module Chromar.Enriched.TH
     ( -- * Quoting
       er, quoteEr
     ) where
 
 import Data.Set (Set, member)
-import Language.Haskell.TH
+import "template-haskell" Language.Haskell.TH
     (Q, Name, Dec(..), Exp(..), Pat(..), Body(..), Clause(..), Stmt(..), mkName)
 import Language.Haskell.TH.Quote (QuasiQuoter(..))
 import Text.ParserCombinators.Parsec (parse)
@@ -105,4 +107,4 @@ mkObsExp' pat nm combE initE = AppE (VarE $ mkName "mkEr") (LetE decs e) where
                  [mkSelect pat, mkErApp' initE, stExp, timeExp])
 
 -- $setup
--- >>> import Language.Haskell.TH (runQ)
+-- >>> import "template-haskell" Language.Haskell.TH (runQ)

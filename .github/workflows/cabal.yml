@@ -38,7 +38,7 @@ jobs:
     - name: build
       run: |
         cabal v2-update
-        cabal v2-build all --enable-tests
+        cabal v2-build all
 
     - name: simple
       run: cabal v2-test chromar:test:simple --test-show-details=direct --test-option="--color=always"

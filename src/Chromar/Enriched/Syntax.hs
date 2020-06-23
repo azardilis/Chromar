@@ -1,3 +1,4 @@
+{-# LANGUAGE PackageImports #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 module Chromar.Enriched.Syntax
@@ -11,7 +12,7 @@ module Chromar.Enriched.Syntax
 import Data.Fixed (mod')
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
-import Language.Haskell.TH (Name, Pat)
+import "template-haskell" Language.Haskell.TH (Name, Pat)
 
 import Chromar.Core (Time)
 import Chromar.Multiset (Multiset, toList)

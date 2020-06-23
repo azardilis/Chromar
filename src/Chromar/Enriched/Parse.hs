@@ -1,3 +1,4 @@
+{-# LANGUAGE PackageImports #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
 module Chromar.Enriched.Parse
@@ -10,7 +11,7 @@ import Data.Set (Set)
 import Data.Functor.Identity (Identity)
 import qualified Data.Set as Set (empty, union, fromList)
 import qualified Language.Haskell.Meta.Parse as Meta (parseExp, parsePat)
-import Language.Haskell.TH (Name, Exp, Pat, mkName)
+import "template-haskell" Language.Haskell.TH (Name, Exp, Pat, mkName)
 import Text.Parsec ((<|>), ParsecT, ParseError, many1, noneOf, between, parse)
 import Text.Parsec.Language (emptyDef)
 import Text.ParserCombinators.Parsec (Parser)
