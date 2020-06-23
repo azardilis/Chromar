@@ -136,7 +136,7 @@ whereParser :: Parser [Dec]
 whereParser = do
     op "where"
     decs <- commaSep dec
-    return (map valDec decs)
+    return $ valDec <$> decs
 
 createExp :: String -> Exp
 createExp exp = case Meta.parseExp exp of
@@ -144,7 +144,7 @@ createExp exp = case Meta.parseExp exp of
     Right exp' -> exp'
 
 createExps :: [String] -> [Exp]
-createExps exps = case mapM Meta.parseExp exps of
+createExps exps = case traverse Meta.parseExp exps of
     Left s -> error s
     Right pexps -> pexps
 

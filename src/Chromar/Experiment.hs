@@ -46,7 +46,7 @@ instance (Show a1, Show a2, Show a3, Show a4, Show a5, Show a6) =>
         " " ++ show v3 ++ " " ++ show v4 ++ " " ++ show v5 ++ " " ++ show v6
 
 instance (Show a) => ToSpaceSep [a] where
-    toSpaceSep xs = unwords $ map show xs
+    toSpaceSep xs = unwords $ show <$> xs
 
 applyEr :: Er a b -> State a -> b
 applyEr er (State m t _n) = at er m t
@@ -54,7 +54,7 @@ applyEr er (State m t _n) = at er m t
 writeRows :: (ToSpaceSep a, ToSpaceSep b) => FilePath -> a -> [b] -> IO ()
 writeRows fn nms traj = do
     let header = toSpaceSep nms
-    let rows = header : map toSpaceSep traj
+    let rows = header : fmap toSpaceSep traj
     writeFile fn (unlines rows)
 
 simN :: Eq a => Int -> Model a -> StdGen -> [State a]

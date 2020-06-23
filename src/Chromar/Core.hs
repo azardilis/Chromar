@@ -66,13 +66,13 @@ getM :: State a -> Multiset a
 getM (State m _ _) = m
 
 getMs :: [State a] -> [Multiset a]
-getMs = map getM
+getMs = fmap getM
 
 getT :: State a -> Time
 getT (State _ t _) = t
 
 getTs :: [State a] -> [Time]
-getTs = map getT
+getTs = fmap getT
 
 fullRate :: (Eq a) => (Multiset a, Multiset a, Double) -> Double
 fullRate (m1, m2, br) = fromIntegral (mults m1 m2) * br
@@ -96,7 +96,7 @@ sample :: R.StdGen -> [Rxn a] -> (Rxn a, Double, R.StdGen)
 sample gen rxns =
     (selectRxn 0.0 b rxns, dt, g2)
     where
-        totalProp = sum $ map rate rxns
+        totalProp = sum $ rate <$> rxns
         (a, g1) = R.randomR (0.0, 1.0) gen
         (b, g2) = R.randomR (0.0, totalProp) g1
         dt = log (1.0 / a) / totalProp
@@ -133,7 +133,7 @@ printTrajectory :: (Show a) => [State a] -> IO ()
 printTrajectory = traverse_ (putStrLn . showState)
 
 writeTrajectory :: (Show a) => FilePath -> [State a] -> IO ()
-writeTrajectory fn states = writeFile fn (unlines $ map showState states)
+writeTrajectory fn states = writeFile fn (unlines $ showState <$> states)
 
 showState :: (Show a) => State a -> String
 showState (State m t n) = unwords [show t, show n, show m]
