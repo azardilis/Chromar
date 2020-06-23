@@ -4,6 +4,7 @@ module Chromar.Experiment
     , run, runT, runW, runTW
     ) where
 
+import Data.Foldable (traverse_)
 import Chromar.Core (Model(..), State(..), Time, simulateRule, getT)
 import Chromar.Enriched.Syntax (Er, at)
 import System.Random (StdGen, getStdGen)
@@ -56,43 +57,43 @@ writeRows fn nms traj = do
     let rows = header : map toSpaceSep traj
     writeFile fn (unlines rows)
 
-simN :: Eq a => Int -> StdGen -> Model a -> [State a]
-simN n rgen model = take n $ simulateRule rgen model
+simN :: Eq a => Int -> Model a -> StdGen -> [State a]
+simN n model rgen = take n $ simulateRule model rgen
 
-simPred :: Eq a => (State a -> Bool) -> StdGen -> Model a -> [State a]
-simPred p rgen model = takeWhile p $ simulateRule rgen model
+simPred :: Eq a => (State a -> Bool) -> Model a -> StdGen -> [State a]
+simPred p model rgen = takeWhile p $ simulateRule model rgen
 
 run
     :: (Eq a, ToSpaceSep b)
     => Model a -> Int -> Er a b -> IO ()
-run model n er = do
-    rgen <- getStdGen
-    let traj = applyEr er <$> simN n rgen model
-    mapM_ (putStrLn . toSpaceSep) traj
+run model n er = getStdGen >>=
+    traverse_ (putStrLn . toSpaceSep)
+    . fmap (applyEr er)
+    . simN n model
 
 runW
     :: (Eq a, ToSpaceSep b)
     => Model a -> Int -> FilePath -> [String] -> Er a b -> IO ()
-runW model n fn nms er = do
-    rgen <- getStdGen
-    let traj = applyEr er <$> simN n rgen model
-    writeRows fn nms traj
+runW model n fn nms er = getStdGen >>=
+    writeRows fn nms
+    . fmap (applyEr er)
+    . simN n model
 
 runT
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> Er a b -> IO ()
-runT model t er = do
-    rgen <- getStdGen
-    let traj = applyEr er <$> simPred (\s' -> getT s' < t) rgen model
-    mapM_ (putStrLn . toSpaceSep) traj
+runT model t er = getStdGen >>=
+    traverse_ (putStrLn . toSpaceSep)
+    . fmap (applyEr er)
+    . simPred (\s' -> getT s' < t) model
 
 runTW
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> FilePath -> [String] -> Er a b -> IO ()
-runTW model t fn nms er = do
-    rgen <- getStdGen
-    let traj = applyEr er <$> simPred (\s' -> getT s' < t) rgen model
-    writeRows fn nms traj
+runTW model t fn nms er = getStdGen >>=
+    writeRows fn nms
+    . fmap (applyEr er)
+    . simPred (\s' -> getT s' < t) model
 
 -- $setup
 -- >>> :set -XScopedTypeVariables -XPackageImports

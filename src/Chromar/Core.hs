@@ -13,6 +13,7 @@ module Chromar.Core
     ) where
 
 import Prelude hiding (init)
+import Data.Foldable (traverse_)
 import qualified System.Random as R (StdGen, randomR)
 import Chromar.Multiset (Multiset, diff, plus, mults)
 
@@ -117,19 +118,19 @@ stepRule rules' (gen, State mix t n) =
         mix' = apply rxn mix
 
 -- | Simulate by iterating 'stepRxn' after first initializing the rules.
-simulateRxn :: (Eq a) => R.StdGen -> Model a -> [State a]
-simulateRxn gen Model{rules, initState} =
+simulateRxn :: (Eq a) => Model a -> R.StdGen -> [State a]
+simulateRxn Model{rules, initState} gen =
     snd <$> iterate (stepRxn rxns) (gen, State initState 0.0 0)
     where
         rxns = concatMap (\r -> r initState 0.0) rules
 
 -- | Simulate by iterating 'stepRule'.
-simulateRule :: (Eq a) => R.StdGen -> Model a -> [State a]
-simulateRule gen Model{rules, initState} =
+simulateRule :: (Eq a) => Model a -> R.StdGen -> [State a]
+simulateRule  Model{rules, initState} gen =
     snd <$> iterate (stepRule rules) (gen, State initState 0.0 0)
 
 printTrajectory :: (Show a) => [State a] -> IO ()
-printTrajectory = mapM_ (putStrLn . showState)
+printTrajectory = traverse_ (putStrLn . showState)
 
 writeTrajectory :: (Show a) => FilePath -> [State a] -> IO ()
 writeTrajectory fn states = writeFile fn (unlines $ map showState states)
