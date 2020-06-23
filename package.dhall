@@ -48,8 +48,11 @@ in  { name =
             , "Chromar.MAttrs"
             , "Chromar.MRuleParser"
             , "Chromar.Multiset"
-            , "Chromar.RExprs"
-            , "Chromar.RuleQuotesE"
+            , "Chromar.Enriched.Parse"
+            , "Chromar.Enriched.Syntax"
+            , "Chromar.Enriched.TH"
+            , "Chromar.Enriched.Zip"
+            , "Chromar.Rule.TH"
             ]
         , when =
             [ { condition =

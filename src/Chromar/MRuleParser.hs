@@ -5,28 +5,28 @@ module Chromar.MRuleParser where
 import Prelude hiding (exp)
 import Text.Parsec
 import Data.Functor.Identity
-import Language.Haskell.Meta.Parse
+import qualified Language.Haskell.Meta.Parse as Meta (parseExp)
 import "template-haskell" Language.Haskell.TH.Syntax
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as Tok
-
-import qualified Chromar.RExprs as RE
+import Chromar.Enriched.Syntax (SEr)
+import Chromar.Enriched.Parse (parseErString, parseExp)
 
 type Var = String
 type AttrName = String
 type Nm = String
 
-data RAgent e = RAgent Nm [(AttrName, RE.SEr e)] deriving (Show)
-data LAgent = LAgent RE.Nm [(AttrName, Var)] deriving (Show)
+data RAgent e = RAgent Nm [(AttrName, SEr e)] deriving (Show)
+data LAgent = LAgent Nm [(AttrName, Var)] deriving (Show)
 
 data ARule e =
     Rule
         { rlhs :: [LAgent]
         , rrhs :: [RAgent e]
         , mults :: [e]
-        , rexpr :: RE.SEr e
-        , cexpr :: RE.SEr e
+        , rexpr :: SEr e
+        , cexpr :: SEr e
         }
     deriving (Show)
 
@@ -81,12 +81,12 @@ lattr = do
     v <- many1 (noneOf ['}', ','])
     return (attrNm, v)
 
-rattr :: Parser (AttrName, RE.SEr Exp)
+rattr :: Parser (AttrName, SEr Exp)
 rattr = do
     attrNm <- name
     op "="
     es <- many1 (noneOf ['}', ','])
-    return (attrNm, RE.parseErString es)
+    return (attrNm, parseErString es)
 
 lagent :: Parser LAgent
 lagent = do
@@ -102,7 +102,7 @@ ragent = do
     m <- option "1" mult
     agentNm <- name
     attrs <- braces (commaSep rattr)
-    return (RE.mkExp m, RAgent agentNm attrs)
+    return (parseExp m, RAgent agentNm attrs)
 
 lhsParser :: Parser [LAgent]
 lhsParser = commaSep lagent
@@ -128,12 +128,12 @@ whereParser = do
     return (map valDec decs)
 
 createExp :: String -> Exp
-createExp exp = case parseExp exp of
+createExp exp = case Meta.parseExp exp of
     Left s -> error s
     Right exp' -> exp'
 
 createExps :: [String] -> [Exp]
-createExps exps = case mapM parseExp exps of
+createExps exps = case mapM Meta.parseExp exps of
     Left s -> error s
     Right pexps -> pexps
 
@@ -152,8 +152,8 @@ parseRule = do
             { rlhs = lhs
             , rrhs = ragents
             , mults = mults'
-            , rexpr = RE.parseErString rexpr'
-            , cexpr = RE.parseErString cexpr'
+            , rexpr = parseErString rexpr'
+            , cexpr = parseErString cexpr'
             }
 
 --- for testing

@@ -1,7 +1,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
 
-module Chromar.RuleQuotesE (rule) where
+module Chromar.Rule.TH (rule) where
 
 import Prelude hiding (exp)
 import Data.Set (Set)
@@ -18,8 +18,9 @@ import "template-haskell" Language.Haskell.TH.Syntax (showName)
 import Text.ParserCombinators.Parsec (parse)
 import Chromar.MRuleParser (LAgent(..), RAgent(..), ARule(..), SRule(..), parseRule)
 import Chromar.MAttrs (fillAttrs)
-import qualified Chromar.RExprs as RE
-import Internal.RuleQuotes as RE
+import Chromar.Enriched.Syntax (SEr)
+import qualified Chromar.Enriched.TH as RE (quoteEr)
+import Internal.RuleQuotes as RE (mkErApp', tuplify, tuplify2)
 
 type FieldProd = (FieldPat, [Exp], Set Name)
 
@@ -33,10 +34,10 @@ tRAgent (RAgent nm attrs) =
         (mkName nm)
         (bimap mkName (RE.mkErApp' . RE.quoteEr) <$> attrs)
 
-tRateE :: RE.SEr Exp -> Exp
+tRateE :: SEr Exp -> Exp
 tRateE = RE.mkErApp' . RE.quoteEr
 
-tCondE :: RE.SEr Exp -> Exp
+tCondE :: SEr Exp -> Exp
 tCondE = RE.mkErApp' . RE.quoteEr
 
 {- haskellify the Chromar rule parts
@@ -170,6 +171,7 @@ ruleQuoter' r = do
     stmts <- mkCompStmts state r
     return $ LamE [VarP state, VarP time] (CompE stmts)
 
+-- | Parse a rule expression.
 ruleQuoter :: String -> Q Exp
 ruleQuoter s =
     case parse parseRule "" s of
