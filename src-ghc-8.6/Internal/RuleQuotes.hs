@@ -38,6 +38,9 @@ lExp nms (RecConE nm fexps) = RecConE nm (map (tFExp nms) fexps) where
 lExp nms (CondE e1 e2 e3) = CondE (lExp nms e1) (lExp nms e2) (lExp nms e3)
 lExp _nms _ = undefined
 
+-- |
+-- >>> ppr . mkErApp $ mkName "x"
+-- (at x s t)
 mkErApp :: Name -> Exp
 mkErApp nm =
     ParensE
@@ -45,9 +48,15 @@ mkErApp nm =
              (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
              (VarE $ mkName "t"))
 
+-- |
+-- >>> ppr $ mkErApp' (mkErApp $ mkName "x")
+-- (at (at x s t) s t)
 mkErApp' :: Exp -> Exp
 mkErApp' e =
     ParensE
         (AppE
              (AppE (AppE (VarE $ mkName "at") e) (VarE $ mkName "s"))
              (VarE $ mkName "t"))
+
+-- $setup
+-- >>> import "template-haskell" Language.Haskell.TH (ppr)
