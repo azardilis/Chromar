@@ -1,11 +1,10 @@
 {-# LANGUAGE PackageImports #-}
 
-module Internal.RuleQuotes (tuplify, tuplify2, lExp, mkErApp, mkErApp') where
+module Internal.RuleQuotes (tuplify, tuplify2, lVarExp) where
 
 import Prelude hiding (exp)
 import Data.Set (Set)
-import qualified Data.Set as Set
-import "template-haskell" Language.Haskell.TH (Name, Stmt(..), Exp(..), mkName)
+import "template-haskell" Language.Haskell.TH (Name, Stmt(..), Exp(..))
 
 tuplify :: Name -> Exp -> Exp -> Exp
 tuplify s lhs r = TupE [lhs, VarE s, r]
@@ -13,50 +12,24 @@ tuplify s lhs r = TupE [lhs, VarE s, r]
 tuplify2 :: Exp -> Exp -> Exp
 tuplify2 m ar = TupE [m, ar]
 
-lExp :: Set Name -> Exp -> Exp
-lExp nms var@(VarE nm) =
-    if Set.member nm nms
-        then mkErApp nm
-        else var
-lExp nms (AppE e1 e2) = AppE (lExp nms e1) (lExp nms e2)
-lExp nms (TupE exps) = TupE (map (lExp nms) exps)
-lExp nms (ListE exps) = ListE (map (lExp nms) exps)
-lExp nms (UInfixE e1 e2 e3) = UInfixE (lExp nms e1) (lExp nms e2) (lExp nms e3)
-lExp nms (ParensE e) = ParensE (lExp nms e)
-lExp nms (LamE pats e) = LamE pats (lExp nms e)
-lExp nms (CompE stmts) = CompE (map (tStmt nms) stmts) where
-    tStmt nms' (BindS p e) = BindS p (lExp nms' e)
-    tStmt nms' (NoBindS e) = NoBindS (lExp nms' e)
+lVarExp :: (Name -> Set Name -> Exp) -> Set Name -> Exp -> Exp
+lVarExp f nms (VarE nm) = f nm nms
+lVarExp f nms (AppE e1 e2) = AppE (lVarExp f nms e1) (lVarExp f nms e2)
+lVarExp f nms (TupE exps) = TupE (map (lVarExp f nms) exps)
+lVarExp f nms (ListE exps) = ListE (map (lVarExp f nms) exps)
+lVarExp f nms (UInfixE e1 e2 e3) = UInfixE (lVarExp f nms e1) (lVarExp f nms e2) (lVarExp f nms e3)
+lVarExp f nms (ParensE e) = ParensE (lVarExp f nms e)
+lVarExp f nms (LamE pats e) = LamE pats (lVarExp f nms e)
+lVarExp f nms (CompE stmts) = CompE (map (tStmt nms) stmts) where
+    tStmt nms' (BindS p e) = BindS p (lVarExp f nms' e)
+    tStmt nms' (NoBindS e) = NoBindS (lVarExp f nms' e)
     tStmt _ LetS{} = error "Unexpected LetS"
     tStmt _ ParS{} = error "Unexpected ParS"
-lExp nms (InfixE me1 e me2) =
-    InfixE (fmap (lExp nms) me1) (lExp nms e) (fmap (lExp nms) me2)
-lExp _ (LitE lit) = LitE lit
-lExp _ (ConE nm) = ConE nm
-lExp nms (RecConE nm fexps) = RecConE nm (map (tFExp nms) fexps) where
-    tFExp nms' (nm', exp) = (nm', lExp nms' exp)
-lExp nms (CondE e1 e2 e3) = CondE (lExp nms e1) (lExp nms e2) (lExp nms e3)
-lExp _nms _ = undefined
-
--- | TODO: Remove 'mkErApp', it is the same as 'mkErFApp'.
--- >>> ppr . mkErApp $ mkName "x"
--- (at x s t)
-mkErApp :: Name -> Exp
-mkErApp nm =
-    ParensE
-        (AppE
-             (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
-             (VarE $ mkName "t"))
-
--- |
--- >>> ppr $ mkErApp' (mkErApp $ mkName "x")
--- (at (at x s t) s t)
-mkErApp' :: Exp -> Exp
-mkErApp' e =
-    ParensE
-        (AppE
-             (AppE (AppE (VarE $ mkName "at") e) (VarE $ mkName "s"))
-             (VarE $ mkName "t"))
-
--- $setup
--- >>> import "template-haskell" Language.Haskell.TH (ppr)
+lVarExp f nms (InfixE me1 e me2) =
+    InfixE (fmap (lVarExp f nms) me1) (lVarExp f nms e) (fmap (lVarExp f nms) me2)
+lVarExp _ _ (LitE lit) = LitE lit
+lVarExp _ _ (ConE nm) = ConE nm
+lVarExp f nms (RecConE nm fexps) = RecConE nm (map (tFExp nms) fexps) where
+    tFExp nms' (nm', exp) = (nm', lVarExp f nms' exp)
+lVarExp f nms (CondE e1 e2 e3) = CondE (lVarExp f nms e1) (lVarExp f nms e2) (lVarExp f nms e3)
+lVarExp _ _nms _ = undefined

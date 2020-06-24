@@ -3,6 +3,7 @@
 module Chromar.Enriched.TH
     ( -- * Quoting
       er, quoteEr
+    , mkErApp'
     ) where
 
 import Data.Set (Set, member)
@@ -11,9 +12,12 @@ import "template-haskell" Language.Haskell.TH
 import Language.Haskell.TH.Quote (QuasiQuoter(..))
 import Text.ParserCombinators.Parsec (parse)
 
-import Internal.RuleQuotes (lExp, mkErApp')
+import Internal.RuleQuotes (lVarExp)
 import Chromar.Enriched.Syntax (SEr(..), Nm)
 import Chromar.Enriched.Parse (parseExp, parseEr)
+
+lExp :: Set Name -> Exp -> Exp
+lExp = lVarExp (\nm nms -> if nm `member` nms then mkErApp nm else VarE nm)
 
 quoteEr :: SEr Exp -> Exp
 quoteEr Time = VarE $ mkName "time"
@@ -106,5 +110,25 @@ mkObsExp' pat nm combE initE = AppE (VarE $ mkName "mkEr") (LetE decs e) where
                  (VarE $ mkName "go")
                  [mkSelect pat, mkErApp' initE, stExp, timeExp])
 
+-- | TODO: Remove 'mkErApp', it is the same as 'mkErFApp'.
+-- >>> ppr . mkErApp $ mkName "x"
+-- (at x s t)
+mkErApp :: Name -> Exp
+mkErApp nm =
+    ParensE
+        (AppE
+             (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
+             (VarE $ mkName "t"))
+
+-- |
+-- >>> ppr $ mkErApp' (mkErApp $ mkName "x")
+-- (at (at x s t) s t)
+mkErApp' :: Exp -> Exp
+mkErApp' e =
+    ParensE
+        (AppE
+             (AppE (AppE (VarE $ mkName "at") e) (VarE $ mkName "s"))
+             (VarE $ mkName "t"))
+
 -- $setup
--- >>> import "template-haskell" Language.Haskell.TH (runQ)
+-- >>> import "template-haskell" Language.Haskell.TH (ppr, runQ)

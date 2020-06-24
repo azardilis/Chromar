@@ -21,8 +21,8 @@ import Chromar.Rule.Syntax (LAgent(..), RAgent(..), ARule(..), SRule(..))
 import Chromar.Rule.Parse (parseRule)
 import Chromar.Rule.Attributes (fillAttrs)
 import Chromar.Enriched.Syntax (SEr)
-import qualified Chromar.Enriched.TH as RE (quoteEr)
-import Internal.RuleQuotes as RE (mkErApp', tuplify, tuplify2)
+import qualified Chromar.Enriched.TH as RE (mkErApp', quoteEr)
+import Internal.RuleQuotes as RE (tuplify, tuplify2)
 
 type FieldProd = (FieldPat, [Exp], Set Name)
 
@@ -118,16 +118,6 @@ mkLhsStmts sn allStmts (exp:exps) = do
 
 mkLhs :: [Exp] -> Q [Stmt]
 mkLhs = mkLhsStmts Set.empty []
-
--- |
--- >>> ppr . mkErFApp $ mkName "x"
--- (at x s t)
-mkErFApp :: Name -> Exp
-mkErFApp nm =
-    ParensE
-        (AppE
-             (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
-             (VarE $ mkName "t"))
 
 mkActExp :: Name -> Exp -> Exp -> Exp
 mkActExp s lhs r = AppE (VarE $ mkName "fullRate") args
