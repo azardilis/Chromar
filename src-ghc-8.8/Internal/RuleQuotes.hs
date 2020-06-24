@@ -39,7 +39,7 @@ lExp nms (RecConE nm fexps) = RecConE nm (map (tFExp nms) fexps) where
 lExp nms (CondE e1 e2 e3) = CondE (lExp nms e1) (lExp nms e2) (lExp nms e3)
 lExp _nms _ = undefined
 
--- |
+-- | TODO: Remove 'mkErApp', it is the same as 'mkErFApp'.
 -- >>> ppr . mkErApp $ mkName "x"
 -- (at x s t)
 mkErApp :: Name -> Exp

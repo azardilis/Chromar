@@ -119,6 +119,9 @@ mkLhsStmts sn allStmts (exp:exps) = do
 mkLhs :: [Exp] -> Q [Stmt]
 mkLhs = mkLhsStmts Set.empty []
 
+-- |
+-- >>> ppr . mkErFApp $ mkName "x"
+-- (at x s t)
 mkErFApp :: Name -> Exp
 mkErFApp nm =
     ParensE
@@ -197,3 +200,6 @@ ruleQuoter'' :: String -> Q Exp
 ruleQuoter'' s = do
     info <- reify $ mkName s
     stringE (show info)
+
+-- $setup
+-- >>> import "template-haskell" Language.Haskell.TH (ppr)
