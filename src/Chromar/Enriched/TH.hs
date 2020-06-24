@@ -1,5 +1,7 @@
 {-# LANGUAGE PackageImports #-}
 
+{-# OPTIONS_HADDOCK ignore-exports #-}
+
 module Chromar.Enriched.TH
     ( -- * Quoting
       er, quoteEr
@@ -117,6 +119,8 @@ mkErApp :: Name -> Exp
 mkErApp nm = mkErApp' (VarE nm)
 
 -- |
+-- >>> ppr $ mkErApp' (VarE $ mkName "x")
+-- (at x s t)
 -- >>> ppr $ mkErApp' (mkErApp $ mkName "x")
 -- (at (at x s t) s t)
 mkErApp' :: Exp -> Exp
