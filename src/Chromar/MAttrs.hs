@@ -5,7 +5,7 @@ module Chromar.MAttrs
     , fillPat, fillAttrs
     ) where
 
-import Chromar.MRuleParser (SRule(..), Nm)
+import Chromar.Rule.Syntax (SRule(..), Nm)
 import qualified Data.Map as M (fromList, toList, difference, union)
 import qualified Data.Set as S (Set, fromList, toList, difference)
 import "template-haskell" Language.Haskell.TH

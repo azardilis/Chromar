@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 11708fe074f1a2471d90022ad020511080115b667fcfcfe589da9f2030dbb33b
+-- hash: 1493260f87d266d36ee08bee55d99ddf15bae142b68f64486dc43c07b3fecdce
 
 name:                chromar
 version:             0.1.0.0
@@ -48,12 +48,13 @@ library
     Chromar.Core
     Chromar.Experiment
     Chromar.MAttrs
-    Chromar.MRuleParser
     Chromar.Multiset
     Chromar.Enriched.Parse
     Chromar.Enriched.Syntax
     Chromar.Enriched.TH
     Chromar.Enriched.Zip
+    Chromar.Rule.Parse
+    Chromar.Rule.Syntax
     Chromar.Rule.TH
   default-language: Haskell2010
 
@@ -69,8 +70,9 @@ test-suite doctest
     Chromar.Enriched.Zip
     Chromar.Experiment
     Chromar.MAttrs
-    Chromar.MRuleParser
     Chromar.Multiset
+    Chromar.Rule.Parse
+    Chromar.Rule.Syntax
     Chromar.Rule.TH
     Paths_chromar
   hs-source-dirs:

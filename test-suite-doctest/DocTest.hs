@@ -20,7 +20,8 @@ arguments =
     , "src/Chromar/Enriched/Zip.hs"
     , "src/Chromar/Experiment.hs"
     , "src/Chromar/MAttrs.hs"
-    , "src/Chromar/MRuleParser.hs"
+    , "src/Chromar/Rule/Parse.hs"
+    , "src/Chromar/Rule/Syntax.hs"
     , "src/Chromar/Multiset.hs"
     , "src/Chromar/Rule/TH.hs"
 

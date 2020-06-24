@@ -46,12 +46,13 @@ in  { name =
             [ "Chromar.Core"
             , "Chromar.Experiment"
             , "Chromar.MAttrs"
-            , "Chromar.MRuleParser"
             , "Chromar.Multiset"
             , "Chromar.Enriched.Parse"
             , "Chromar.Enriched.Syntax"
             , "Chromar.Enriched.TH"
             , "Chromar.Enriched.Zip"
+            , "Chromar.Rule.Parse"
+            , "Chromar.Rule.Syntax"
             , "Chromar.Rule.TH"
             ]
         , when =

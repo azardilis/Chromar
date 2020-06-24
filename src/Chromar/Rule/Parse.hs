@@ -1,8 +1,7 @@
 {-# LANGUAGE PackageImports #-}
 
-module Chromar.MRuleParser
-    ( SRule(..), ARule(..), LAgent(..), RAgent(..), Nm
-    , langDef, lexer, op, name, commaSep, braces, squares, whiteSpace
+module Chromar.Rule.Parse
+    ( langDef, lexer, op, name, commaSep, braces, squares, whiteSpace
     , lattr, rattr, lagent, mult, ragent
     , dec, valDec
     , lhsParser, rhsParser, whereParser, parseRule
@@ -23,33 +22,7 @@ import qualified Text.Parsec.Token as Tok
     )
 import Chromar.Enriched.Syntax (SEr)
 import Chromar.Enriched.Parse (parseErString, parseExp)
-
-type Var = String
-type AttrName = String
-type Nm = String
-
-data RAgent e = RAgent Nm [(AttrName, SEr e)] deriving (Show)
-data LAgent = LAgent Nm [(AttrName, Var)] deriving (Show)
-
-data ARule e =
-    Rule
-        { rlhs :: [LAgent]
-        , rrhs :: [RAgent e]
-        , mults :: [e]
-        , rexpr :: SEr e
-        , cexpr :: SEr e
-        }
-    deriving (Show)
-
-data SRule =
-    SRule
-        { lexps :: [Exp]
-        , rexps :: [Exp]
-        , multExps :: [Exp]
-        , srate :: Exp
-        , cond :: Exp
-        }
-    deriving (Show)
+import Chromar.Rule.Syntax
 
 langDef :: Tok.GenLanguageDef String u Identity
 langDef =
