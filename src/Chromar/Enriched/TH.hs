@@ -110,15 +110,11 @@ mkObsExp' pat nm combE initE = AppE (VarE $ mkName "mkEr") (LetE decs e) where
                  (VarE $ mkName "go")
                  [mkSelect pat, mkErApp' initE, stExp, timeExp])
 
--- | TODO: Remove 'mkErApp', it is the same as 'mkErFApp'.
+-- |
 -- >>> ppr . mkErApp $ mkName "x"
 -- (at x s t)
 mkErApp :: Name -> Exp
-mkErApp nm =
-    ParensE
-        (AppE
-             (AppE (AppE (VarE $ mkName "at") (VarE nm)) (VarE $ mkName "s"))
-             (VarE $ mkName "t"))
+mkErApp nm = mkErApp' (VarE nm)
 
 -- |
 -- >>> ppr $ mkErApp' (mkErApp $ mkName "x")
