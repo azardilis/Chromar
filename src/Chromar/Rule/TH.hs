@@ -170,6 +170,10 @@ ruleQ r = do
 
 -- | Parse a rule.
 --
+-- Note that we have to do this
+-- <https://stackoverflow.com/a/16691737/1503186 in a splice> instead of using runQ
+-- otherwise we get "Template Haskell error: Can't do `reify' in the IO monad".
+--
 -- >>> render $(ruleExp "A{x=x}, A{x=y} --> A{x='x+1'}, A{x='y-1'} @'1.0' ['y > 0']")
 -- ...
 --         ‘(\ s_... t_...
