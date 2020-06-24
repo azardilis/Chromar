@@ -1,9 +1,10 @@
 {-# LANGUAGE PackageImports #-}
 {-# OPTIONS_HADDOCK ignore-exports #-}
 
+-- | Quasiquoting enriched expressions.
 module Chromar.Enriched.TH
     ( -- * Quoting
-      er, quoteEr
+      er, eval
     , mkErApp'
     ) where
 
@@ -20,30 +21,37 @@ import Chromar.Enriched.Parse (parseExp, parseEr)
 lExp :: Set Name -> Exp -> Exp
 lExp = lVarExp (\nm nms -> if nm `member` nms then mkErApp nm else VarE nm)
 
-quoteEr :: SEr Exp -> Exp
-quoteEr Time = VarE $ mkName "time"
-quoteEr (XExpr nms e) = AppE (VarE $ mkName "mkEr") (mkLiftExp nms e)
-quoteEr (When er1 er2 er3) = mkWhenExp (quoteEr er1) (quoteEr er2) (quoteEr er3)
-quoteEr (Repeat er1 er2) = mkRepeatExp (quoteEr er1) (quoteEr er2)
-quoteEr (Obs lat nm er1 er2) = mkObsExp' lat nm (quoteEr er1) (quoteEr er2)
+-- | Evaluate the syntax of enriched expressions as expressions in the host
+-- language.
+--
+-- >>> ppr $ eval Time
+-- time
+eval :: SEr Exp -> Exp
+eval Time = VarE $ mkName "time"
+eval (XExpr nms e) = AppE (VarE $ mkName "mkEr") (mkLiftExp nms e)
+eval (When er1 er2 er3) = mkWhenExp (eval er1) (eval er2) (eval er3)
+eval (Repeat er1 er2) = mkRepeatExp (eval er1) (eval er2)
+eval (Obs lat nm er1 er2) = mkObsExp' lat nm (eval er1) (eval er2)
 
--- |
--- >>> runQ $ erQuoter "repeatEvery '5' (when '$light$ + 1' '5' else '1')"
--- AppE (AppE (VarE repeatEvery) (AppE (VarE mkEr) (LamE [WildP,WildP] (LitE (IntegerL 5))))) (AppE (AppE (VarE orElse) (AppE (AppE (VarE when) (AppE (VarE mkEr) (LamE [WildP,WildP] (UInfixE (VarE light) (VarE +) (LitE (IntegerL 1)))))) (AppE (VarE mkEr) (LamE [WildP,WildP] (LitE (IntegerL 5)))))) (AppE (VarE mkEr) (LamE [WildP,WildP] (LitE (IntegerL 1)))))
+-- | Parse an er, an enriched expression.
 --
--- >>> runQ $ erQuoter "select Leaf{m=m}; aggregate (count.'count + m') '0'"
--- AppE (VarE mkEr) (LetE [FunD go [Clause [ListP [],VarP count,VarP s,VarP t] (NormalB (VarE count)) [],Clause [ParensP (UInfixP (RecP Leaf [(m,VarP m)]) : (VarP as)),VarP count,VarP s,VarP t] (NormalB (AppE (AppE (AppE (AppE (VarE go) (VarE as)) (ParensE (AppE (AppE (AppE (VarE at) (AppE (VarE mkEr) (LamE [WildP,WildP] (UInfixE (VarE count) (VarE +) (VarE m))))) (VarE s)) (VarE t)))) (VarE s)) (VarE t))) []]] (LamE [VarP s,VarP t] (AppE (AppE (AppE (AppE (VarE go) (CompE [BindS (AsP el (RecP Leaf [(m,VarP m)])) (AppE (VarE toList) (VarE s)),NoBindS (VarE el)])) (ParensE (AppE (AppE (AppE (VarE at) (AppE (VarE mkEr) (LamE [WildP,WildP] (LitE (IntegerL 0))))) (VarE s)) (VarE t)))) (VarE s)) (VarE t))))
+-- >>> render $ erExp "repeatEvery '5' (when '$light$ + 1' '5' else '1')"
+-- repeatEvery (mkEr (\_ _ -> 5)) (orElse (when (mkEr (\_ _ -> light + 1)) (mkEr (\_ _ -> 5))) (mkEr (\_ _ -> 1)))
 --
-erQuoter :: String -> Q Exp
-erQuoter s = case parse (parseEr parseExp) "er" s of
+-- >>> render $ erExp "select Leaf{m=m}; aggregate (count.'count + m') '0'"
+-- mkEr (let go [] count s t = count
+--           go ((Leaf {m = m}) : as) count s t = go as (at (mkEr (\_ _ -> count + m)) s t) s t
+--        in \s t -> go [el | el@(Leaf {m = m}) <- toList s] (at (mkEr (\_ _ -> 0)) s t) s t)
+erExp :: String -> Q Exp
+erExp s = case parse (parseEr parseExp) "er" s of
     Left err -> error (show err)
-    Right e -> return $ quoteEr e
+    Right e -> return $ eval e
 
--- | Parse the quote into Er then create the functions per the semantics.
+-- | The er quasiquoter may be used produce enriched expressions.
 er :: QuasiQuoter
 er =
     QuasiQuoter
-        { quoteExp = erQuoter
+        { quoteExp = erExp
         , quotePat = undefined
         , quoteDec = undefined
         , quoteType = undefined
@@ -83,7 +91,7 @@ stExp :: Exp
 stExp = VarE $ mkName "s"
 
 -- |
--- >>> timeExp
+-- >>> ppr timeExp
 -- t
 timeExp :: Exp
 timeExp = VarE $ mkName "t"
@@ -147,3 +155,4 @@ mkErApp' e =
 
 -- $setup
 -- >>> import "template-haskell" Language.Haskell.TH (ppr, runQ)
+-- >>> render = fmap ppr . runQ

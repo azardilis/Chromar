@@ -38,8 +38,6 @@ arguments =
     , "src-ghc-8.6/Internal/RuleQuotes.hs"
 #endif
 
-    , "-package random-1.1"
-
     , "-XPackageImports"
     ]
 

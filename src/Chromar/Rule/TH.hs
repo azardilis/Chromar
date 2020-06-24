@@ -1,6 +1,8 @@
 {-# LANGUAGE PackageImports #-}
 {-# OPTIONS_GHC -fno-warn-unused-top-binds #-}
+{-# OPTIONS_HADDOCK ignore-exports #-}
 
+-- | Quasiquoting rules.
 module Chromar.Rule.TH (rule) where
 
 import Prelude hiding (exp)
@@ -21,7 +23,7 @@ import Chromar.Rule.Syntax (LAgent(..), RAgent(..), ARule(..), SRule(..))
 import Chromar.Rule.Parse (parseRule)
 import Chromar.Rule.Attributes (fillAttrs)
 import Chromar.Enriched.Syntax (SEr)
-import qualified Chromar.Enriched.TH as RE (mkErApp', quoteEr)
+import qualified Chromar.Enriched.TH as RE (mkErApp', eval)
 import Internal.RuleQuotes as RE (tuplify, tuplify2)
 
 type FieldProd = (FieldPat, [Exp], Set Name)
@@ -34,13 +36,13 @@ tRAgent :: RAgent Exp -> Exp
 tRAgent (RAgent nm attrs) =
     RecConE
         (mkName nm)
-        (bimap mkName (RE.mkErApp' . RE.quoteEr) <$> attrs)
+        (bimap mkName (RE.mkErApp' . RE.eval) <$> attrs)
 
 tRateE :: SEr Exp -> Exp
-tRateE = RE.mkErApp' . RE.quoteEr
+tRateE = RE.mkErApp' . RE.eval
 
 tCondE :: SEr Exp -> Exp
-tCondE = RE.mkErApp' . RE.quoteEr
+tCondE = RE.mkErApp' . RE.eval
 
 {- haskellify the Chromar rule parts
    left agent exprs become Haskell record exprs etc.
@@ -159,27 +161,49 @@ mkCompStmts s r = do
     patStmts <- mkLhs (lexps r)
     return $ patStmts ++ [guardStmt, actStmt, retStmt]
 
-ruleQuoter' :: SRule -> Q Exp
-ruleQuoter' r = do
+ruleQ :: SRule -> Q Exp
+ruleQ r = do
     state <- newName "s"
     time <- newName "t"
     stmts <- mkCompStmts state r
     return $ LamE [VarP state, VarP time] (CompE stmts)
 
--- | Parse a rule expression.
-ruleQuoter :: String -> Q Exp
-ruleQuoter s =
+-- | Parse a rule.
+--
+-- >>> render $(ruleExp "A{x=x}, A{x=y} --> A{x='x+1'}, A{x='y-1'} @'1.0' ['y > 0']")
+-- ...
+--         ‘(\ s_... t_...
+--             -> [Rxn
+--                   {lhs = ms [A {x = x}, ....],
+--                    rhs = ms
+--                            (nrepl
+--                               ([1, ....],
+--                                [A {x = (((at (mkEr (\ _ _ -> ...))) s_...) t_...)}, ....])),
+--                    rate = fullRate
+--                             (ms [...], s_..., (((at (mkEr (\ _ _ -> 1.0))) s_...) t_...))} |
+--                   (A {x = x}, _) <- s_...,
+--                   and [],
+--                   (A {x = y}, _) <- s_...,
+--                   and [],
+--                   (((at (mkEr (\ _ _ -> y > 0))) s_...) t_...),
+--                   ((>)
+--                      (fullRate
+--                         (ms [A {x = x}, ....], s_...,
+--                          (((at (mkEr (\ _ _ -> 1.0))) s_...) t_...))))
+--                     0])’
+-- ...
+ruleExp :: String -> Q Exp
+ruleExp s =
     case parse parseRule "" s of
         Left err -> error (show err)
-        Right r -> do
-            let sr = tRule r
-            sr' <- fillAttrs sr
-            ruleQuoter' sr'
+        Right r -> ruleQ =<< fillAttrs (tRule r)
 
+-- | The rule quasiquoter takes rules and evaluates these as a function from
+-- state and time to a list of reactions.
 rule :: QuasiQuoter
 rule =
     QuasiQuoter
-        { quoteExp = ruleQuoter
+        { quoteExp = ruleExp
         , quotePat = undefined
         , quoteDec = undefined
         , quoteType = undefined
@@ -192,4 +216,10 @@ ruleQuoter'' s = do
     stringE (show info)
 
 -- $setup
--- >>> import "template-haskell" Language.Haskell.TH (ppr)
+-- >>> :set -XTemplateHaskell -XFlexibleInstances
+-- >>> import "template-haskell" Language.Haskell.TH (ppr, runQ)
+-- >>> import Chromar.Core
+-- >>> import Chromar.Multiset
+-- >>> import Chromar.Enriched.Syntax
+-- >>> data Agent = A { x :: Double } deriving (Eq, Show)
+-- >>> render = fmap ppr . runQ
