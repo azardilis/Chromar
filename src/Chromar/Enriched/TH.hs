@@ -1,5 +1,4 @@
 {-# LANGUAGE PackageImports #-}
-
 {-# OPTIONS_HADDOCK ignore-exports #-}
 
 module Chromar.Enriched.TH
@@ -65,12 +64,28 @@ mkSelect pat = CompE [bindStmt, retStmt]
                 (AppE (VarE $ mkName "toList") (VarE $ mkName "s"))
         retStmt = NoBindS (VarE $ mkName "el")
 
-stPat, timePat :: Pat
+-- |
+-- >>> ppr stPat
+-- s
+stPat :: Pat
 stPat = VarP $ mkName "s"
+
+-- |
+-- >>> ppr timePat
+-- t
+timePat :: Pat
 timePat = VarP $ mkName "t"
 
-stExp, timeExp :: Exp
+-- |
+-- >>> ppr stExp
+-- s
+stExp :: Exp
 stExp = VarE $ mkName "s"
+
+-- |
+-- >>> timeExp
+-- t
+timeExp :: Exp
 timeExp = VarE $ mkName "t"
 
 mkLiftExp :: Set Name -> Exp -> Exp
