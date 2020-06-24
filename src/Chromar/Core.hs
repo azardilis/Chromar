@@ -53,7 +53,7 @@ data State a =
           !Int
 
 -- (mixture, time, num of steps)
-instance (Show a) => Show (State a) where
+instance Show a => Show (State a) where
     show (State m t n) = show m ++ show t ++ show n
 
 data Model a =
@@ -74,13 +74,13 @@ getT (State _ t _) = t
 getTs :: [State a] -> [Time]
 getTs = fmap getT
 
-fullRate :: (Eq a) => (Multiset a, Multiset a, Double) -> Double
+fullRate :: Eq a => (Multiset a, Multiset a, Double) -> Double
 fullRate (m1, m2, br) = fromIntegral (mults m1 m2) * br
 
 nrepl :: ([Int], [a]) -> [a]
 nrepl (mults', elems) = concat [replicate m e | (m, e) <- zip mults' elems]
 
-apply :: (Eq a) => Rxn a -> Multiset a -> Multiset a
+apply :: Eq a => Rxn a -> Multiset a -> Multiset a
 apply rxn mix = mix `diff` lhs rxn `plus` rhs rxn
 
 selectRxn :: Double -> Double -> [Rxn a] -> Rxn a
@@ -101,14 +101,14 @@ sample gen rxns =
         (b, g2) = R.randomR (0.0, totalProp) g1
         dt = log (1.0 / a) / totalProp
 
-stepRxn :: (Eq a) => [Rxn a] -> (R.StdGen, State a) -> (R.StdGen, State a)
+stepRxn :: Eq a => [Rxn a] -> (R.StdGen, State a) -> (R.StdGen, State a)
 stepRxn rxns (gen, State mix t n) =
     (gen', State mix' (t + dt) (n + 1))
     where
         (rxn, dt, gen') = sample gen rxns
         mix' = apply rxn mix
 
-stepRule :: (Eq a) => [Rule a] -> (R.StdGen, State a) -> (R.StdGen, State a)
+stepRule :: Eq a => [Rule a] -> (R.StdGen, State a) -> (R.StdGen, State a)
 stepRule rules' (gen, State mix t n) =
     (gen', State mix' (t + dt) (n + 1))
     where
@@ -118,22 +118,22 @@ stepRule rules' (gen, State mix t n) =
         mix' = apply rxn mix
 
 -- | Simulate by iterating 'stepRxn' after first initializing the rules.
-simulateRxn :: (Eq a) => Model a -> R.StdGen -> [State a]
+simulateRxn :: Eq a => Model a -> R.StdGen -> [State a]
 simulateRxn Model{rules, initState} gen =
     snd <$> iterate (stepRxn rxns) (gen, State initState 0.0 0)
     where
         rxns = concatMap (\r -> r initState 0.0) rules
 
 -- | Simulate by iterating 'stepRule'.
-simulateRule :: (Eq a) => Model a -> R.StdGen -> [State a]
+simulateRule :: Eq a => Model a -> R.StdGen -> [State a]
 simulateRule  Model{rules, initState} gen =
     snd <$> iterate (stepRule rules) (gen, State initState 0.0 0)
 
-printTrajectory :: (Show a) => [State a] -> IO ()
+printTrajectory :: Show a => [State a] -> IO ()
 printTrajectory = traverse_ (putStrLn . showState)
 
-writeTrajectory :: (Show a) => FilePath -> [State a] -> IO ()
+writeTrajectory :: Show a => FilePath -> [State a] -> IO ()
 writeTrajectory fn states = writeFile fn (unlines $ showState <$> states)
 
-showState :: (Show a) => State a -> String
+showState :: Show a => State a -> String
 showState (State m t n) = unwords [show t, show n, show m]

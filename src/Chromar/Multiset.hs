@@ -20,10 +20,10 @@ frequencies acc (x:xs) = frequencies (update acc) xs
             | otherwise = (y, n) : update ys
         update [] = [(x, 1)]
 
-ms :: (Eq a) => [a] -> Multiset a
+ms :: Eq a => [a] -> Multiset a
 ms = frequencies []
 
-occur :: (Eq a) => a -> Multiset a -> Int
+occur :: Eq a => a -> Multiset a -> Int
 occur el m = case lookup el m of
     (Just n) -> n
     Nothing -> 0
@@ -39,7 +39,7 @@ binom :: Int -> Int -> Int
 binom n k = perms n k `quot` product (numsToOne k) where
     numsToOne n' = enumFromThenTo n' (n' - 1) 1
 
-mults :: (Eq a) => Multiset a -> Multiset a -> Int
+mults :: Eq a => Multiset a -> Multiset a -> Int
 mults m1 m2 = product [ binom (occur el m2) m | (el, m) <- m1 ]
 
 diff :: (Eq a) => Multiset a -> Multiset a -> Multiset a
@@ -52,7 +52,7 @@ diff ((x, n):xs) ys =
             | otherwise = diff xs ys
         sub Nothing = (x, n) : diff xs ys
 
-plus :: (Eq a) => Multiset a -> Multiset a -> Multiset a
+plus :: Eq a => Multiset a -> Multiset a -> Multiset a
 plus [] ys = ys
 plus ((x, n):xs) ys =
     add $ findAndRemove [] (\(y, _) -> x == y) ys

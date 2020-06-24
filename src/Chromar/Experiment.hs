@@ -45,7 +45,7 @@ instance (Show a1, Show a2, Show a3, Show a4, Show a5, Show a6) =>
         show v2 ++
         " " ++ show v3 ++ " " ++ show v4 ++ " " ++ show v5 ++ " " ++ show v6
 
-instance (Show a) => ToSpaceSep [a] where
+instance Show a => ToSpaceSep [a] where
     toSpaceSep xs = unwords $ show <$> xs
 
 applyEr :: Er a b -> State a -> b
