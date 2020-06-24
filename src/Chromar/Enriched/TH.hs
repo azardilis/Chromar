@@ -64,13 +64,12 @@ mkFApp _ [] = undefined
 mkFApp f (e:exps) = foldr (flip AppE) (AppE f e) (reverse exps)
 
 mkSelect :: Pat -> Exp
-mkSelect pat = CompE [bindStmt, retStmt]
-    where
-        bindStmt =
-            BindS
-                (AsP (mkName "el") pat)
-                (AppE (VarE $ mkName "toList") (VarE $ mkName "s"))
-        retStmt = NoBindS (VarE $ mkName "el")
+mkSelect pat = CompE [bindStmt, retStmt] where
+    bindStmt =
+        BindS
+            (AsP (mkName "el") pat)
+            (AppE (VarE $ mkName "toList") (VarE $ mkName "s"))
+    retStmt = NoBindS (VarE $ mkName "el")
 
 -- |
 -- >>> ppr stPat

@@ -79,8 +79,7 @@ qtFieldPat names fexp@(nm, _exp) = do
     return $ tFieldPat names fn fexp
 
 mkGuardExp :: [[Exp]] -> Exp
-mkGuardExp expss = AppE andFunc (ListE exps)
-  where
+mkGuardExp expss = AppE andFunc (ListE exps) where
     andFunc = VarE (mkName "and")
     exps = concat expss
 
@@ -122,8 +121,7 @@ mkLhs :: [Exp] -> Q [Stmt]
 mkLhs = mkLhsStmts Set.empty []
 
 mkActExp :: Name -> Exp -> Exp -> Exp
-mkActExp s lhs r = AppE (VarE $ mkName "fullRate") args
-  where
+mkActExp s lhs r = AppE (VarE $ mkName "fullRate") args where
     args = tuplify s lhs r
 
 mkReturnStmt :: Exp -> Stmt
@@ -197,10 +195,9 @@ ruleQ r = do
 --                     0])’
 -- ...
 ruleExp :: String -> Q Exp
-ruleExp s =
-    case parse parseRule "" s of
-        Left err -> error (show err)
-        Right r -> ruleQ =<< fillAttrs (tRule r)
+ruleExp s = case parse parseRule "" s of
+    Left err -> error (show err)
+    Right r -> ruleQ =<< fillAttrs (tRule r)
 
 -- | The rule quasiquoter takes rules and evaluates these as a function from
 -- state and time to a list of reactions.
