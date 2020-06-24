@@ -1,6 +1,6 @@
 {-# LANGUAGE PackageImports #-}
 
-module Chromar.MAttrs
+module Chromar.Rule.Attributes
     ( AgentType(..)
     , fillPat, fillAttrs
     ) where

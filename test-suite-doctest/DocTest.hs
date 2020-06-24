@@ -14,15 +14,17 @@ arguments :: [String]
 arguments =
     [ "-isrc"
     , "src/Chromar/Core.hs"
+    , "src/Chromar/Experiment.hs"
+    , "src/Chromar/Multiset.hs"
+
     , "src/Chromar/Enriched/Parse.hs"
     , "src/Chromar/Enriched/Syntax.hs"
     , "src/Chromar/Enriched/TH.hs"
     , "src/Chromar/Enriched/Zip.hs"
-    , "src/Chromar/Experiment.hs"
-    , "src/Chromar/MAttrs.hs"
+
+    , "src/Chromar/Rule/Attributes.hs"
     , "src/Chromar/Rule/Parse.hs"
     , "src/Chromar/Rule/Syntax.hs"
-    , "src/Chromar/Multiset.hs"
     , "src/Chromar/Rule/TH.hs"
 
 #if __GLASGOW_HASKELL__ >= 810

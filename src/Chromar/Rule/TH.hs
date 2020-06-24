@@ -19,7 +19,7 @@ import Text.ParserCombinators.Parsec (parse)
 
 import Chromar.Rule.Syntax (LAgent(..), RAgent(..), ARule(..), SRule(..))
 import Chromar.Rule.Parse (parseRule)
-import Chromar.MAttrs (fillAttrs)
+import Chromar.Rule.Attributes (fillAttrs)
 import Chromar.Enriched.Syntax (SEr)
 import qualified Chromar.Enriched.TH as RE (quoteEr)
 import Internal.RuleQuotes as RE (mkErApp', tuplify, tuplify2)

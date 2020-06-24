@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1493260f87d266d36ee08bee55d99ddf15bae142b68f64486dc43c07b3fecdce
+-- hash: 412fbc5d058a36f1639a1bd84350e7b9b1c8ce848bbee998aecaf1ec591fc5bb
 
 name:                chromar
 version:             0.1.0.0
@@ -47,12 +47,12 @@ library
   other-modules:
     Chromar.Core
     Chromar.Experiment
-    Chromar.MAttrs
     Chromar.Multiset
     Chromar.Enriched.Parse
     Chromar.Enriched.Syntax
     Chromar.Enriched.TH
     Chromar.Enriched.Zip
+    Chromar.Rule.Attributes
     Chromar.Rule.Parse
     Chromar.Rule.Syntax
     Chromar.Rule.TH
@@ -69,8 +69,8 @@ test-suite doctest
     Chromar.Enriched.TH
     Chromar.Enriched.Zip
     Chromar.Experiment
-    Chromar.MAttrs
     Chromar.Multiset
+    Chromar.Rule.Attributes
     Chromar.Rule.Parse
     Chromar.Rule.Syntax
     Chromar.Rule.TH
