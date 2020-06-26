@@ -5,13 +5,14 @@ module Chromar.Rule.Attributes
     , fillPat, fillAttrs
     ) where
 
-import Chromar.Rule.Syntax (SRule(..), Nm)
 import qualified Data.Map as M (fromList, toList, difference, union)
 import qualified Data.Set as S (Set, fromList, toList, difference)
 import "template-haskell" Language.Haskell.TH
     ( Q, Dec(..), Exp(..), Info(..), FieldExp, Con(..)
     , reify, mkName, nameBase, newName
     )
+
+import Chromar.Rule.Syntax (SRule(..), Nm)
 
 data AgentType = AgentT Nm (S.Set Nm) deriving (Show)
 
@@ -75,11 +76,6 @@ tRExp l r
     | sameType l r = fRExp l r
     | otherwise = r
 
-lZipWith :: (a -> b -> b) -> [a] -> [b] -> [b]
-lZipWith _ _ls [] = []
-lZipWith _ [] rs = rs
-lZipWith f (l:ls) (r:rs) = f l r : lZipWith f ls rs
-
 fillAttrs :: SRule -> Q SRule
 fillAttrs
     SRule
@@ -92,11 +88,10 @@ fillAttrs
     info <- reify (mkName "Agent")
     let aTyps = extractIntf info
     les' <- traverse (fPat aTyps) les
-    let res' = lZipWith tRExp les' res
     return
         SRule
             { lexps = les'
-            , rexps = res'
+            , rexps = zipWith tRExp les' res
             , multExps = m
             , srate = r
             , cond = c
