@@ -2,6 +2,16 @@
 
 ![cabal](https://github.com/BlockScope/Chromar/workflows/cabal/badge.svg)
 
+### Documentation
+
+The published package documentation, such as you'd find on hackage or stackage,
+will only include exposed modules but internal modules have documentation too
+that can be built locally.
+
+```
+% cabal haddock chromar --haddock-internal
+```
+
 ### Build Tools
 
 We show how to get going with both stack and cabal. Pick either one or both.

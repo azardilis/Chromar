@@ -1,8 +1,19 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, NamedFieldPuns #-}
 
-module Chromar.Core where
+module Chromar.Core
+    ( Rule
+    , Time
+    , Rxn(..)
+    , State(..)
+    , Model(..)
+    , getM, getMs, getT, getTs
+    , stepRule, stepRxn, fullRate, nrepl
+    , simulateRule, simulateRxn
+    , printTrajectory, writeTrajectory
+    ) where
 
 import Prelude hiding (init)
+import Data.Foldable (traverse_)
 import qualified System.Random as R (StdGen, randomR)
 import Chromar.Multiset (Multiset, diff, plus, mults)
 
@@ -42,7 +53,7 @@ data State a =
           !Int
 
 -- (mixture, time, num of steps)
-instance (Show a) => Show (State a) where
+instance Show a => Show (State a) where
     show (State m t n) = show m ++ show t ++ show n
 
 data Model a =
@@ -55,21 +66,21 @@ getM :: State a -> Multiset a
 getM (State m _ _) = m
 
 getMs :: [State a] -> [Multiset a]
-getMs = map getM
+getMs = fmap getM
 
 getT :: State a -> Time
 getT (State _ t _) = t
 
 getTs :: [State a] -> [Time]
-getTs = map getT
+getTs = fmap getT
 
-fullRate :: (Eq a) => (Multiset a, Multiset a, Double) -> Double
+fullRate :: Eq a => (Multiset a, Multiset a, Double) -> Double
 fullRate (m1, m2, br) = fromIntegral (mults m1 m2) * br
 
 nrepl :: ([Int], [a]) -> [a]
 nrepl (mults', elems) = concat [replicate m e | (m, e) <- zip mults' elems]
 
-apply :: (Eq a) => Rxn a -> Multiset a -> Multiset a
+apply :: Eq a => Rxn a -> Multiset a -> Multiset a
 apply rxn mix = mix `diff` lhs rxn `plus` rhs rxn
 
 selectRxn :: Double -> Double -> [Rxn a] -> Rxn a
@@ -85,26 +96,20 @@ sample :: R.StdGen -> [Rxn a] -> (Rxn a, Double, R.StdGen)
 sample gen rxns =
     (selectRxn 0.0 b rxns, dt, g2)
     where
-        totalProp = sum $ map rate rxns
+        totalProp = sum $ rate <$> rxns
         (a, g1) = R.randomR (0.0, 1.0) gen
         (b, g2) = R.randomR (0.0, totalProp) g1
         dt = log (1.0 / a) / totalProp
 
-step' :: (Eq a) => [Rxn a] -> (R.StdGen, State a) -> (R.StdGen, State a)
-step' rxns (gen, State mix t n) =
+stepRxn :: Eq a => [Rxn a] -> (R.StdGen, State a) -> (R.StdGen, State a)
+stepRxn rxns (gen, State mix t n) =
     (gen', State mix' (t + dt) (n + 1))
     where
         (rxn, dt, gen') = sample gen rxns
         mix' = apply rxn mix
 
-simulate' :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
-simulate' gen rules' init =
-    map snd $ iterate (step' rxns) (gen, State init 0.0 0)
-    where
-        rxns = concatMap (\r -> r init 0.0) rules'
-
-step :: (Eq a) => [Rule a] -> (R.StdGen, State a) -> (R.StdGen, State a)
-step rules' (gen, State mix t n) =
+stepRule :: Eq a => [Rule a] -> (R.StdGen, State a) -> (R.StdGen, State a)
+stepRule rules' (gen, State mix t n) =
     (gen', State mix' (t + dt) (n + 1))
     where
         rxns = concatMap (\r -> r mix t) rules'
@@ -112,14 +117,23 @@ step rules' (gen, State mix t n) =
         (rxn, dt, gen') = sample gen actRxns
         mix' = apply rxn mix
 
-simulate :: (Eq a) => R.StdGen -> [Rule a] -> Multiset a -> [State a]
-simulate gen rules' init = map snd $ iterate (step rules') (gen, State init 0.0 0)
+-- | Simulate by iterating 'stepRxn' after first initializing the rules.
+simulateRxn :: Eq a => Model a -> R.StdGen -> [State a]
+simulateRxn Model{rules, initState} gen =
+    snd <$> iterate (stepRxn rxns) (gen, State initState 0.0 0)
+    where
+        rxns = concatMap (\r -> r initState 0.0) rules
 
-printTrajectory :: (Show a) => [State a] -> IO ()
-printTrajectory = mapM_ (putStrLn . showState)
+-- | Simulate by iterating 'stepRule'.
+simulateRule :: Eq a => Model a -> R.StdGen -> [State a]
+simulateRule  Model{rules, initState} gen =
+    snd <$> iterate (stepRule rules) (gen, State initState 0.0 0)
 
-writeTrajectory :: (Show a) => FilePath -> [State a] -> IO ()
-writeTrajectory fn states = writeFile fn (unlines $ map showState states)
+printTrajectory :: Show a => [State a] -> IO ()
+printTrajectory = traverse_ (putStrLn . showState)
 
-showState :: (Show a) => State a -> String
+writeTrajectory :: Show a => FilePath -> [State a] -> IO ()
+writeTrajectory fn states = writeFile fn (unlines $ showState <$> states)
+
+showState :: Show a => State a -> String
 showState (State m t n) = unwords [show t, show n, show m]

@@ -1,9 +1,18 @@
-module Chromar.MAttrs where
+{-# LANGUAGE PackageImports #-}
 
-import Chromar.MRuleParser
-import qualified Data.Map as M
-import qualified Data.Set as S
-import Language.Haskell.TH
+module Chromar.Rule.Attributes
+    ( AgentType(..)
+    , fillPat, fillAttrs
+    ) where
+
+import qualified Data.Map as M (fromList, toList, difference, union)
+import qualified Data.Set as S (Set, fromList, toList, difference)
+import "template-haskell" Language.Haskell.TH
+    ( Q, Dec(..), Exp(..), Info(..), FieldExp, Con(..)
+    , reify, mkName, nameBase, newName
+    )
+
+import Chromar.Rule.Syntax (SRule(..), Nm)
 
 data AgentType = AgentT Nm (S.Set Nm) deriving (Show)
 
@@ -22,11 +31,11 @@ fst3 (x, _, _) = x
 
 getType :: Con -> AgentType
 getType (RecC nm ifce) = AgentT (nameBase nm) (S.fromList fNames) where
-    fNames = map (nameBase . fst3) ifce
+    fNames = nameBase . fst3 <$> ifce
 getType _ = error "Expected records"
 
 extractIntf :: Info -> [AgentType]
-extractIntf (TyConI (DataD _ _ _ _ cons _)) = map getType cons
+extractIntf (TyConI (DataD _ _ _ _ cons _)) = getType <$> cons
 extractIntf _ = error "Expected type constructor"
 
 createMFExp :: Nm -> Q FieldExp
@@ -37,9 +46,9 @@ createMFExp nm = do
 fillPat :: AgentType -> Exp -> Q Exp
 fillPat typ (RecConE nm fexps) = do
     let fIntf = getIntf typ
-    let pIntf = S.fromList $ map (nameBase . fst) fexps
+    let pIntf = S.fromList $ nameBase . fst <$> fexps
     let mAttrs = S.difference fIntf pIntf
-    mFExps <- mapM createMFExp (S.toList mAttrs)
+    mFExps <- traverse createMFExp (S.toList mAttrs)
     return $ RecConE nm (fexps ++ mFExps)
 fillPat _ _ = error "Expected record patterns"
 
@@ -67,11 +76,6 @@ tRExp l r
     | sameType l r = fRExp l r
     | otherwise = r
 
-lZipWith :: (a -> b -> b) -> [a] -> [b] -> [b]
-lZipWith _ _ls [] = []
-lZipWith _ [] rs = rs
-lZipWith f (l:ls) (r:rs) = f l r : lZipWith f ls rs
-
 fillAttrs :: SRule -> Q SRule
 fillAttrs
     SRule
@@ -83,12 +87,11 @@ fillAttrs
         } = do
     info <- reify (mkName "Agent")
     let aTyps = extractIntf info
-    les' <- mapM (fPat aTyps) les
-    let res' = lZipWith tRExp les' res
+    les' <- traverse (fPat aTyps) les
     return
         SRule
             { lexps = les'
-            , rexps = res'
+            , rexps = zipWith tRExp les' res
             , multExps = m
             , srate = r
             , cond = c

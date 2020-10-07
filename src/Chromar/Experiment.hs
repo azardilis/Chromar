@@ -1,11 +1,15 @@
--- | Convenience functions for running models
-module Chromar.Experiment where
+-- | Convenience functions for running models.
+module Chromar.Experiment
+    ( ToSpaceSep(..)
+    , run, runT, runW, runTW
+    ) where
 
-import Chromar.Core
-import Chromar.RExprs hiding (er)
-import qualified System.Random as R
+import Data.Foldable (traverse_)
+import Chromar.Core (Model(..), State(..), Time, simulateRule, getT)
+import Chromar.Enriched.Syntax (Er, at)
+import System.Random (StdGen, getStdGen)
 
-class ToSpaceSep a  where
+class ToSpaceSep a where
     toSpaceSep :: a -> String
 
 instance ToSpaceSep Int where
@@ -41,46 +45,57 @@ instance (Show a1, Show a2, Show a3, Show a4, Show a5, Show a6) =>
         show v2 ++
         " " ++ show v3 ++ " " ++ show v4 ++ " " ++ show v5 ++ " " ++ show v6
 
-instance (Show a) => ToSpaceSep [a] where
-    toSpaceSep xs = unwords $ map show xs
+instance Show a => ToSpaceSep [a] where
+    toSpaceSep xs = unwords $ show <$> xs
 
 applyEr :: Er a b -> State a -> b
 applyEr er (State m t _n) = at er m t
 
-run
-    :: (Eq a, ToSpaceSep b)
-    => Model a -> Int -> Er a b -> IO ()
-run Model{rules = rs, initState = s} n er = do
-    rgen <- R.getStdGen
-    let traj = map (applyEr er) $ take n (simulate rgen rs s)
-    mapM_ (putStrLn . toSpaceSep) traj
-
 writeRows :: (ToSpaceSep a, ToSpaceSep b) => FilePath -> a -> [b] -> IO ()
 writeRows fn nms traj = do
     let header = toSpaceSep nms
-    let rows = header : map toSpaceSep traj
+    let rows = header : fmap toSpaceSep traj
     writeFile fn (unlines rows)
+
+simN :: Eq a => Int -> Model a -> StdGen -> [State a]
+simN n model rgen = take n $ simulateRule model rgen
+
+simPred :: Eq a => (State a -> Bool) -> Model a -> StdGen -> [State a]
+simPred p model rgen = takeWhile p $ simulateRule model rgen
+
+run
+    :: (Eq a, ToSpaceSep b)
+    => Model a -> Int -> Er a b -> IO ()
+run model n er = getStdGen >>=
+    traverse_ (putStrLn . toSpaceSep)
+    . fmap (applyEr er)
+    . simN n model
 
 runW
     :: (Eq a, ToSpaceSep b)
     => Model a -> Int -> FilePath -> [String] -> Er a b -> IO ()
-runW Model{rules = rs, initState = s} n fn nms er = do
-    rgen <- R.getStdGen
-    let traj = map (applyEr er) $ take n (simulate rgen rs s)
-    writeRows fn nms traj
+runW model n fn nms er = getStdGen >>=
+    writeRows fn nms
+    . fmap (applyEr er)
+    . simN n model
 
 runT
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> Er a b -> IO ()
-runT Model{rules = rs, initState = s} t er = do
-    rgen <- R.getStdGen
-    let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulate rgen rs s)
-    mapM_ (putStrLn . toSpaceSep) traj
+runT model t er = getStdGen >>=
+    traverse_ (putStrLn . toSpaceSep)
+    . fmap (applyEr er)
+    . simPred (\s' -> getT s' < t) model
 
 runTW
     :: (Eq a, ToSpaceSep b)
     => Model a -> Time -> FilePath -> [String] -> Er a b -> IO ()
-runTW Model{rules = rs, initState = s} t fn nms er = do
-    rgen <- R.getStdGen
-    let traj = map (applyEr er) $ takeWhile (\s' -> getT s' < t) (simulate rgen rs s)
-    writeRows fn nms traj
+runTW model t fn nms er = getStdGen >>=
+    writeRows fn nms
+    . fmap (applyEr er)
+    . simPred (\s' -> getT s' < t) model
+
+-- $setup
+-- >>> :set -XScopedTypeVariables -XPackageImports
+-- >>> import "template-haskell" Language.Haskell.TH
+-- >>> import "QuickCheck" Test.QuickCheck

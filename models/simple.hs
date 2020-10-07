@@ -13,7 +13,7 @@ $(return [])
 -- Rules
 r1, r2 :: [(Agent, Int)] -> Time -> [Rxn Agent]
 r1 = [rule| A{x=x}, A{x=y} --> A{x='x+1'}, A{x='y-1'} @'1.0' ['y > 0'] |]
-r2 = [rule| A{x=x}          --> A{x='x'}, A{x='0'} @'1.0' |]
+r2 = [rule| A{x=x} --> A{x='x'}, A{x='0'} @'1.0' |]
 
 na, nx :: Er Agent Int
 na = [er| select A{x=x}; aggregate (count . 'count + 1') '0' |]
@@ -26,4 +26,4 @@ model :: Model Agent
 model = Model{ rules = [r1, r2], initState = s }
 
 main :: IO ()
-main = let nsteps = 100 in run model nsteps (zipEr2 na nx)
+main = let nsteps = 100 in run model nsteps (erZip na nx)

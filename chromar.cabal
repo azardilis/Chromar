@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 24afd774e77f2f8fe08feda357a2478ac0811c21b163cdb8d08ee824b399087f
+-- hash: 412fbc5d058a36f1639a1bd84350e7b9b1c8ce848bbee998aecaf1ec591fc5bb
 
 name:                chromar
 version:             0.1.0.0
@@ -21,7 +21,7 @@ library
     haskell-src-meta,
     multiset,
     parsec,
-    random,
+    random ==1.1,
     template-haskell
   if impl(ghc >= 8.10.0)
     other-modules:
@@ -47,11 +47,65 @@ library
   other-modules:
     Chromar.Core
     Chromar.Experiment
-    Chromar.MAttrs
-    Chromar.MRuleParser
     Chromar.Multiset
-    Chromar.RExprs
-    Chromar.RuleQuotesE
+    Chromar.Enriched.Parse
+    Chromar.Enriched.Syntax
+    Chromar.Enriched.TH
+    Chromar.Enriched.Zip
+    Chromar.Rule.Attributes
+    Chromar.Rule.Parse
+    Chromar.Rule.Syntax
+    Chromar.Rule.TH
+  default-language: Haskell2010
+
+test-suite doctest
+  type: exitcode-stdio-1.0
+  main-is: DocTest.hs
+  other-modules:
+    Chromar
+    Chromar.Core
+    Chromar.Enriched.Parse
+    Chromar.Enriched.Syntax
+    Chromar.Enriched.TH
+    Chromar.Enriched.Zip
+    Chromar.Experiment
+    Chromar.Multiset
+    Chromar.Rule.Attributes
+    Chromar.Rule.Parse
+    Chromar.Rule.Syntax
+    Chromar.Rule.TH
+    Paths_chromar
+  hs-source-dirs:
+    src
+    test-suite-doctest
+  other-extensions: BangPatterns
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths -rtsopts -threaded -with-rtsopts=-N
+  build-depends:
+    QuickCheck,
+    base,
+    chromar,
+    containers,
+    doctest,
+    haskell-src-meta,
+    multiset,
+    parsec,
+    random ==1.1,
+    template-haskell
+  if impl(ghc >= 8.10.0)
+    other-modules:
+      Internal.RuleQuotes
+    hs-source-dirs:
+      src-ghc-8.10
+  if impl(ghc >= 8.8.0) && impl(ghc < 8.10.0)
+    other-modules:
+      Internal.RuleQuotes
+    hs-source-dirs:
+      src-ghc-8.8
+  if impl(ghc >= 8.6.0) && impl(ghc < 8.8.0)
+    other-modules:
+      Internal.RuleQuotes
+    hs-source-dirs:
+      src-ghc-8.6
   default-language: Haskell2010
 
 test-suite gdiff
