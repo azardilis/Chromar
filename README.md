@@ -7,7 +7,7 @@
 
 The language is defined in a couple of publications: [base language](https://doi.org/10.1016/j.entcs.2018.03.008) and [base language + extensions](https://doi.org/10.1016/j.tcs.2017.07.034).
 
-The language and this implementation have been used, for example, to define an ecologically relevant whole-plant model: [publication]([https://doi.org/10.1093/jxb/ery394](https://doi.org/10.1093/jxb/ery394)), [Chromar model](https://github.com/azardilis/ChromarFM).
+The language and this implementation have been used, for example, to define an ecologically relevant whole-plant model: [publication](https://doi.org/10.1093/jxb/ery394), [Chromar model](https://github.com/azardilis/ChromarFM).
 
 
 ### Documentation
