@@ -9,14 +9,6 @@ data Agent = L { m :: Double }
            | R { n :: Int }
            deriving (Eq, Show)
 
-isL :: Agent -> Bool
-isL (L{}) = True
-isL _     = False
-
-isB :: Agent -> Bool
-isB (B{}) = True
-isB _     = False
-
 $(return [])
 
 --- Rules
@@ -28,25 +20,10 @@ leafCreation = [rule| R{n=n}         --> R{n='n+1'}, L{m='0'} @'0.0001' ['True']
 --- Initial state
 s = ms [L{m=0.01}, L{m=0.02}, B{c=0.3}, R{n=2}]
 
-
 --- Observables
-rosMass =
-    Observable
-    { name = "rosetteMass"
-    , gen = sumM m . select isL
-    }
-
-carbon =
-    Observable
-    { name = "carbon"
-    , gen = sumM c . select isB
-    }
-
-nLeaves =
-    Observable
-    { name = "nLeaves"
-    , gen = countM . select isL
-    }
+rosMass = [er| select L{m=m}; aggregate (tMass. 'tMass + m') '0.0'|]
+carbon = [er| select B{c=c}; aggregate (tCarb. 'tCarb + c') '0.0'|]
+nLeaves = [er| select L{m=m}; aggregate (nL. 'nL + 1') '0'|]
 
 model =
     Model
@@ -59,4 +36,4 @@ main :: IO ()
 main = run model nsteps observables
   where
     nsteps = 1000
-    observables = [rosMass, carbon, nLeaves]
+    observables = erZip3 rosMass carbon nLeaves

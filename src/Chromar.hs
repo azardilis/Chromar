@@ -14,7 +14,7 @@ module Chromar
 import Chromar.Core (Model(..), Time, Rxn(..), fullRate, nrepl)
 import Chromar.Enriched.Syntax (Er(..), mkEr)
 import Chromar.Enriched.TH (er)
-import Chromar.Enriched.Zip (erZip)
+import Chromar.Enriched.Zip (erZip, erZip3)
 import Chromar.Experiment (run)
 import Chromar.Multiset (Multiset, ms, toList)
 import Chromar.Rule.TH (rule)
