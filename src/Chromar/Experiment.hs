@@ -13,10 +13,10 @@ class ToSpaceSep a where
     toSpaceSep :: a -> String
 
 instance ToSpaceSep Int where
-    toSpaceSep i = show i
+    toSpaceSep = show
 
 instance ToSpaceSep Double where
-    toSpaceSep d = show d
+    toSpaceSep = show
 
 instance (Show a1, Show a2) =>
          ToSpaceSep (a1, a2) where
