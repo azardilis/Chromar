@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 652a61d11cf7206f69deda4f156dd4581e5e8a930aaec21b6849465072948e27
+-- hash: 8b5f0460fe7950d10f3bb0467d1e8005692197bc1248dc481dcba0ac32b36a95
 
 name:                chromar
 version:             0.1.0.0
@@ -144,21 +144,6 @@ test-suite germ
     random,
     text
   buildable: False
-  default-language: Haskell2010
-
-test-suite hlint
-  type: exitcode-stdio-1.0
-  main-is: HLint.hs
-  hs-source-dirs:
-    test-suite-hlint
-  other-extensions:
-    BangPatterns
-  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths -rtsopts -threaded -with-rtsopts=-N
-  build-depends:
-    base,
-    chromar,
-    containers,
-    hlint
   default-language: Haskell2010
 
 test-suite market

@@ -60,14 +60,7 @@ in  let deps =
             ]
           }
         , tests =
-          { hlint =
-            { dependencies = [ "base", "hlint", "chromar" ]
-            , ghc-options = testopts
-            , other-modules = [] : List Text
-            , main = "HLint.hs"
-            , source-dirs = "test-suite-hlint"
-            }
-          , doctest =
+          { doctest =
             { dependencies = deps # [ "doctest", "QuickCheck", "chromar" ]
             , ghc-options = testopts
             , main = "DocTest.hs"
