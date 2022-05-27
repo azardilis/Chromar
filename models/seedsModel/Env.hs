@@ -130,7 +130,7 @@ htu t a psi
     mpsB = psB ar psi + kt * (tempt-to)
 
 
-disp = when (ntemp <>*> constant 0.0) ntemp `orElse` (constant 0.0) where
+disp = when (ntemp <>*> constant 0.0) ntemp `orElse` constant 0.0 where
   ntemp = temp <-*> constant tbd
   
 ------

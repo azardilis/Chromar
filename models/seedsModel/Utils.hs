@@ -33,7 +33,7 @@ data DState = DState { dtime :: Double,
 
 data Summ = Summary Int Int Int
 
-showSumm (t, (Summary nseeds nplants nfplants)) =
+showSumm (t, Summary nseeds nplants nfplants) =
   show t ++ " "  ++ show nseeds ++ " " ++ show nplants ++ " " ++ show nfplants
 
 isSeed (Seed{ attr=at, dg=d, art=a }) = True
@@ -74,26 +74,27 @@ mkSt psis =
     pss = take n psis
      
 mkSt' :: [Agent]
-mkSt' = ( replicate 3 (Seed{attr = Attrs {ind=0, psi=(-0.5)}, dg=0.0, art=0.0}) ++
-          replicate 18 (Seed{attr = Attrs {ind=0, psi=(-0.388)}, dg=0.0, art=0.0}) ++
-          replicate 66 (Seed{attr = Attrs {ind=0, psi=(-0.2777)}, dg=0.0, art=0.0}) ++
-          replicate 161 (Seed{attr = Attrs {ind=0, psi=(-0.1666)}, dg=0.0, art=0.0}) ++
-          replicate 252 (Seed{attr = Attrs {ind=0, psi=(-0.05555)}, dg=0.0, art=0.0}) ++
-          replicate 3 (Seed{attr = Attrs {ind=0, psi=0.5}, dg=0.0, art=0.0}) ++
-          replicate 18 (Seed{attr = Attrs {ind=0, psi=0.388}, dg=0.0, art=0.0}) ++
-          replicate 66 (Seed{attr = Attrs {ind=0, psi=0.2777}, dg=0.0, art=0.0}) ++
-          replicate 161 (Seed{attr = Attrs {ind=0, psi=0.1666}, dg=0.0, art=0.0}) ++
-          replicate 252 (Seed{attr = Attrs {ind=0, psi=0.05555}, dg=0.0, art=0.0}) )
+mkSt' =
+  replicate 3 (Seed{attr = Attrs {ind=0, psi= -0.5}, dg=0.0, art=0.0}) ++
+  replicate 18 (Seed{attr = Attrs {ind=0, psi= -0.388}, dg=0.0, art=0.0}) ++
+  replicate 66 (Seed{attr = Attrs {ind=0, psi= -0.2777}, dg=0.0, art=0.0}) ++
+  replicate 161 (Seed{attr = Attrs {ind=0, psi= -0.1666}, dg=0.0, art=0.0}) ++
+  replicate 252 (Seed{attr = Attrs {ind=0, psi= -0.05555}, dg=0.0, art=0.0}) ++
+  replicate 3 (Seed{attr = Attrs {ind=0, psi=0.5}, dg=0.0, art=0.0}) ++
+  replicate 18 (Seed{attr = Attrs {ind=0, psi=0.388}, dg=0.0, art=0.0}) ++
+  replicate 66 (Seed{attr = Attrs {ind=0, psi=0.2777}, dg=0.0, art=0.0}) ++
+  replicate 161 (Seed{attr = Attrs {ind=0, psi=0.1666}, dg=0.0, art=0.0}) ++
+  replicate 252 (Seed{attr = Attrs {ind=0, psi=0.05555}, dg=0.0, art=0.0})
 
 
 stepF :: DState -> DState
 stepF DState { dtime=t, mixt=m } = DState { dtime=t+1, mixt=fmap foo m }
   where
-    foo = transAgent . (devAgent t)
+    foo = transAgent . devAgent t
 
 devAgent :: Time -> Agent -> Agent
 devAgent t (Seed {attr = atr, dg = d, art = a}) =
-  Seed {attr = atr, dg = d + (htu t a (psi atr)), art = a + (arUpd mst tmp)}
+  Seed {attr = atr, dg = d + htu t a (psi atr), art = a + arUpd mst tmp}
   where
     mst = at moist t
     tmp = at temp t
@@ -139,13 +140,13 @@ outD dss = mapM_ print summs
   where
     summs = map summD dss
 
-fname i = "out/outDW/outD" ++ (show i) ++ ".txt"
+fname i = "out/outDW/outD" ++ show i ++ ".txt"
 
-doSimulation :: [Double] -> Int -> IO ([Double])
+doSimulation :: [Double] -> Int -> IO [Double]
 doSimulation psis i = do
     print i
     let (s, psis') = mkSt psis
-    let nsteps = (365 * 24 * 2)
+    let nsteps = 365 * 24 * 2
     let initS =
             DState
             { dtime = 0
