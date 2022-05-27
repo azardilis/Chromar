@@ -103,14 +103,10 @@ arUpd moist temp
   | otherwise = 0.0
 
 
-psB ar psi =
-  if psb' > psmin
-     then psb'
-     else psmin
-  where
-    arlab = arUpd (-200) 20
-    dsat = 40
-    psb' = psi - psSc * (ar / (arlab * dsat * 24) )
+psB ar psi = max psb' psmin where
+  arlab = arUpd (-200) 20
+  dsat = 40
+  psb' = psi - psSc * (ar / (arlab * dsat * 24) )
 
 
 htuSub ar psi moist temp = (moist - psB ar psi) * (temp - tbg)
@@ -142,7 +138,7 @@ disp = when (ntemp <>*> constant 0.0) ntemp `orElse` (constant 0.0) where
 parseLine :: Int -> T.Text -> (Double, Double)
 parseLine n ln = (read $ T.unpack time, read $ T.unpack temp) where
   elems = T.splitOn (T.pack ",") ln
-  time = T.dropEnd 1 (T.drop 1 $ elems !! 0)
+  time = T.dropEnd 1 (T.drop 1 $ head elems)
   temp = elems !! n
 
 
