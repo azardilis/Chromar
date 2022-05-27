@@ -57,7 +57,7 @@ isSystem _ = False
 
 
 avg l  = let (t,n) = foldl' (\(b,c) a -> (a+b,c+1)) (0,0) l 
-         in (realToFrac(t)/realToFrac(n))
+         in (realToFrac t / realToFrac n)
 
 log' :: Double -> Double
 --log' t = 1.0 / (1.0 + exp (-0.1 * (t - 950.0)))
@@ -159,13 +159,13 @@ devfp = [rule| FPlant{dg=d} --> FPlant{dg=d+disp} @1.0 |]
 transfp = [rule| FPlant{tob=tb,attr=a,dg=d}, System{ssTimes=st} -->
                    Seed{tob=time, attr=a, dg=0.0, art=0.0}, System{ssTimes=(time-tb):st} @logs' d |]
 
-fname i = "models/seedsModel/out/outS/outS" ++ (show i) ++ ".txt"
+fname i = "models/seedsModel/out/outS/outS" ++ show i ++ ".txt"
 
-doSimulation :: [Double] -> Int -> IO ([Double])
+doSimulation :: [Double] -> Int -> IO [Double]
 doSimulation psis i = do
   print i
   let (s, psis') = mkSt'' psis
-  let t = (365*24*2)
+  let t = 365*24*2
   let m =
          Model
          {rules = [dev, trans, devp, transp, devfp, transfp], initState = s}
@@ -192,7 +192,7 @@ showRow (t, val) = show t ++ " " ++ show val
 writeTraj fn traj = writeFile fn (unlines rows)
   where
     header = "time" ++ " " ++ "val"
-    rows = header : (map showRow traj)
+    rows = header : map showRow traj
 
 calcDay = floor . (/24)
 
@@ -209,7 +209,7 @@ runTW' (Model {rules = rs
               ,initState = s}) tEnd fn obs = do
   rgen <- R.getStdGen
   let traj = everyN 100 (takeWhile (\s -> getT s < tEnd) $ simulate rgen rs s)
-  let ttraj = [ (t, gen obs $ m) | State m t n <- traj]
+  let ttraj = [ (t, gen obs m) | State m t n <- traj]
   writeTraj fn ttraj
 
 

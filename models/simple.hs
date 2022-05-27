@@ -6,6 +6,7 @@
 import Chromar
 
 -- Agent declarations
+{-# ANN type Agent "HLint: ignore Use newtype instead of data" #-}
 data Agent = A { x :: Int } deriving (Eq, Show)
 
 $(return [])

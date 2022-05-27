@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.dhall by hpack version 0.31.0.
+-- This file has been generated from package.dhall by hpack version 0.34.7.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 412fbc5d058a36f1639a1bd84350e7b9b1c8ce848bbee998aecaf1ec591fc5bb
+-- hash: fb69c1d8ca7f315363bb97081e23e61788fb4c34e9f39a27733a71f40579628a
 
 name:                chromar
 version:             0.1.0.0
@@ -21,7 +21,7 @@ library
     haskell-src-meta,
     multiset,
     parsec,
-    random ==1.1,
+    random >=1.2,
     template-haskell
   if impl(ghc >= 8.10.0)
     other-modules:
@@ -40,7 +40,8 @@ library
       src-ghc-8.6
   hs-source-dirs:
     src
-  other-extensions: BangPatterns
+  other-extensions:
+    BangPatterns
   ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   exposed-modules:
     Chromar
@@ -78,7 +79,8 @@ test-suite doctest
   hs-source-dirs:
     src
     test-suite-doctest
-  other-extensions: BangPatterns
+  other-extensions:
+    BangPatterns
   ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths -rtsopts -threaded -with-rtsopts=-N
   build-depends:
     QuickCheck,
@@ -89,7 +91,7 @@ test-suite doctest
     haskell-src-meta,
     multiset,
     parsec,
-    random ==1.1,
+    random >=1.2,
     template-haskell
   if impl(ghc >= 8.10.0)
     other-modules:
@@ -113,7 +115,8 @@ test-suite gdiff
   main-is: gdiff.hs
   hs-source-dirs:
     models
-  other-extensions: BangPatterns
+  other-extensions:
+    BangPatterns
   ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   build-depends:
     base,
@@ -130,7 +133,8 @@ test-suite germ
     SeedsModel.Germ
   hs-source-dirs:
     models/seedsModel
-  other-extensions: BangPatterns
+  other-extensions:
+    BangPatterns
   ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   build-depends:
     base,
@@ -142,26 +146,13 @@ test-suite germ
   buildable: False
   default-language: Haskell2010
 
-test-suite hlint
-  type: exitcode-stdio-1.0
-  main-is: HLint.hs
-  hs-source-dirs:
-    test-suite-hlint
-  other-extensions: BangPatterns
-  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths -rtsopts -threaded -with-rtsopts=-N
-  build-depends:
-    base,
-    chromar,
-    containers,
-    hlint
-  default-language: Haskell2010
-
 test-suite market
   type: exitcode-stdio-1.0
   main-is: Market.hs
   hs-source-dirs:
     models/market
-  other-extensions: BangPatterns
+  other-extensions:
+    BangPatterns
   ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   build-depends:
     base,
@@ -172,12 +163,13 @@ test-suite market
   buildable: False
   default-language: Haskell2010
 
-test-suite plant
+test-suite model
   type: exitcode-stdio-1.0
-  main-is: plant.hs
+  main-is: model.hs
   hs-source-dirs:
     models
-  other-extensions: BangPatterns
+  other-extensions:
+    BangPatterns
   ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   build-depends:
     base,
@@ -186,12 +178,27 @@ test-suite plant
   buildable: False
   default-language: Haskell2010
 
+test-suite plant
+  type: exitcode-stdio-1.0
+  main-is: plant.hs
+  hs-source-dirs:
+    models
+  other-extensions:
+    BangPatterns
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
+  build-depends:
+    base,
+    chromar,
+    containers
+  default-language: Haskell2010
+
 test-suite simple
   type: exitcode-stdio-1.0
   main-is: simple.hs
   hs-source-dirs:
     models
-  other-extensions: BangPatterns
+  other-extensions:
+    BangPatterns
   ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   build-depends:
     base,
@@ -207,7 +214,8 @@ test-suite utils
     SeedsModel.Utils
   hs-source-dirs:
     models
-  other-extensions: BangPatterns
+  other-extensions:
+    BangPatterns
   ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   build-depends:
     base,
