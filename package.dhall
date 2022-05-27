@@ -104,7 +104,6 @@ in  let deps =
             , other-modules = [] : List Text
             , main = "plant.hs"
             , source-dirs = "models"
-            , buildable = False
             }
           , simple =
             { dependencies = [ "base", "chromar" ]

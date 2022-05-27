@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4ef41c64c8d5ef49064e4ab76cf3e8f2a0018cd3749b273f929093b8d5ccd055
+-- hash: fb69c1d8ca7f315363bb97081e23e61788fb4c34e9f39a27733a71f40579628a
 
 name:                chromar
 version:             0.1.0.0
@@ -190,7 +190,6 @@ test-suite plant
     base,
     chromar,
     containers
-  buildable: False
   default-language: Haskell2010
 
 test-suite simple
