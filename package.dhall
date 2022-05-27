@@ -2,7 +2,7 @@ let testopts = [ "-rtsopts", "-threaded", "-with-rtsopts=-N" ]
 
 in  let deps =
           [ "base"
-          , "random == 1.1"
+          , "random >= 1.2"
           , "parsec"
           , "template-haskell"
           , "haskell-src-meta"

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8b5f0460fe7950d10f3bb0467d1e8005692197bc1248dc481dcba0ac32b36a95
+-- hash: 4ef41c64c8d5ef49064e4ab76cf3e8f2a0018cd3749b273f929093b8d5ccd055
 
 name:                chromar
 version:             0.1.0.0
@@ -21,7 +21,7 @@ library
     haskell-src-meta,
     multiset,
     parsec,
-    random ==1.1,
+    random >=1.2,
     template-haskell
   if impl(ghc >= 8.10.0)
     other-modules:
@@ -91,7 +91,7 @@ test-suite doctest
     haskell-src-meta,
     multiset,
     parsec,
-    random ==1.1,
+    random >=1.2,
     template-haskell
   if impl(ghc >= 8.10.0)
     other-modules:
