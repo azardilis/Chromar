@@ -209,7 +209,7 @@ runTW' (Model {rules = rs
               ,initState = s}) tEnd fn obs = do
   rgen <- R.getStdGen
   let traj = everyN 100 (takeWhile (\s -> getT s < tEnd) $ simulate rgen rs s)
-  let ttraj = [ (t, gen obs $ m) | State m t n <- traj]
+  let ttraj = [ (t, gen obs m) | State m t n <- traj]
   writeTraj fn ttraj
 
 
