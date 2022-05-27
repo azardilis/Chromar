@@ -9,9 +9,16 @@ import qualified Data.Map.Strict as Map
 
 dataFile = "data/weatherValencia10yrs.csv"
 
+{-# NOINLINE temp' #-}
 temp' = unsafePerformIO (readTable dataFile 4)
+
+{-# NOINLINE photo' #-}
 photo' = unsafePerformIO (readTable dataFile 2)
+
+{-# NOINLINE day' #-}
 day' = unsafePerformIO (readTable dataFile 3)
+
+{-# NOINLINE moist #-}
 moist = unsafePerformIO (readTable dataFile 5)
 
 
