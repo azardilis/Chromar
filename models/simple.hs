@@ -6,7 +6,7 @@
 import Chromar
 
 -- Agent declarations
-data Agent = A { x :: Int } deriving (Eq, Show)
+newtype Agent = A { x :: Int } deriving (Eq, Show)
 
 $(return [])
 
