@@ -1,0 +1,8 @@
+# Warnings currently triggered by your code
+- ignore: {name: "Eta reduce"} # 2 hints
+- ignore: {name: "Missing NOINLINE pragma"} # 4 hints
+- ignore: {name: "Redundant $"} # 1 hint
+- ignore: {name: "Redundant bracket"} # 20 hints
+- ignore: {name: "Use head"} # 1 hint
+- ignore: {name: "Use max"} # 1 hint
+- ignore: {name: "Use newtype instead of data"} # 1 hint
